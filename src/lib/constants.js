@@ -534,6 +534,8 @@ export const DEFAULT_SETTINGS = {
   tokenPriceDisplay: false,
   projectRagEnabled: false,
   projectRagLimit: 5,
+  locale: "en",
+  syncLocale: true,
   processGitignoreOnUpload: true,
 };
 

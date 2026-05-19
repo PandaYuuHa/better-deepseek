@@ -8,6 +8,7 @@
     DEFAULT_SYSTEM_PROMPT,
   } from "../../lib/constants.js";
   import { getActiveProject, updateProject } from "../project-manager.js";
+  import { t, i18n } from "../../lib/i18n.svelte.js";
 
   let customSystemPrompts = $state(appState.settings.customSystemPrompts || []);
   let activeSystemPromptId = $state(appState.settings.activeSystemPromptId || "default");
@@ -49,6 +50,8 @@
   let projectRagEnabled = $state(Boolean(appState.settings.projectRagEnabled));
   let projectRagLimit = $state(Number(appState.settings.projectRagLimit) || 5);
   let processGitignoreOnUpload = $state(Boolean(appState.settings.processGitignoreOnUpload));
+  let locale = $state(appState.settings.locale || "en");
+  let syncLocale = $state(Boolean(appState.settings.syncLocale));
   let advancedOpen = $state(false);
 
   let activeProject = $state(getActiveProject());
@@ -86,6 +89,8 @@
     projectRagEnabled = Boolean(appState.settings.projectRagEnabled);
     projectRagLimit = Number(appState.settings.projectRagLimit) || 5;
     processGitignoreOnUpload = Boolean(appState.settings.processGitignoreOnUpload);
+    locale = appState.settings.locale || "en";
+    syncLocale = Boolean(appState.settings.syncLocale);
   }
 
   export function refreshProject() {
@@ -146,6 +151,8 @@
     appState.settings.projectRagEnabled = projectRagEnabled;
     appState.settings.projectRagLimit = Number(projectRagLimit) || 5;
     appState.settings.processGitignoreOnUpload = processGitignoreOnUpload;
+    appState.settings.locale = locale;
+    appState.settings.syncLocale = syncLocale;
 
     await chrome.storage.local.set({
       [STORAGE_KEYS.settings]: appState.settings,
@@ -153,7 +160,7 @@
     pushConfigToPage();
 
     if (appState.ui) {
-      appState.ui.showToast("Settings saved.");
+      appState.ui.showToast(t("settings.settingsSaved"));
     }
   }
 
@@ -179,7 +186,7 @@
 
   function savePrompt() {
     if (!promptEditorName.trim() || !promptEditorContent.trim()) {
-      if (appState.ui) appState.ui.showToast("Name and content are required.");
+      if (appState.ui) appState.ui.showToast(t("settings.nameRequired"));
       return;
     }
 
@@ -256,11 +263,11 @@
       >
     </svg>
   </span>
-  General Settings
+  {t('settings.generalSettings')}
 </div>
 
 <div class="bds-section-title">
-  <label class="bds-label">System Prompts</label>
+  <label class="bds-label">{t('settings.systemPrompts')}</label>
 </div>
 
 <div class="bds-list">
@@ -268,13 +275,13 @@
     <label onclick={() => { activeSystemPromptId = "default"; save(); }} role="button" tabindex="0">
       <input type="radio" checked={activeSystemPromptId === "default"} readonly />
       <div class="bds-prompt-info">
-        <span class="bds-prompt-name">Default (Hidden)</span>
-        <span class="bds-prompt-status">Read-only core instructions</span>
+        <span class="bds-prompt-name">{t('settings.defaultPromptName')}</span>
+        <span class="bds-prompt-status">{t('settings.defaultPromptStatus')}</span>
       </div>
     </label>
     <div class="bds-prompt-actions">
-      <button class="bds-btn-outlined" style="font-size: 11px; padding: 4px 8px;" title="View" onclick={() => openPromptEditor({ id: 'default', name: 'Default (Hidden)', content: appState.settings.systemPrompt || DEFAULT_SYSTEM_PROMPT, readonly: true })}>
-        View
+      <button class="bds-btn-outlined" style="font-size: 11px; padding: 4px 8px;" title={t('settings.view')} onclick={() => openPromptEditor({ id: 'default', name: t('settings.defaultPromptName'), content: appState.settings.systemPrompt || DEFAULT_SYSTEM_PROMPT, readonly: true })}>
+        {t('settings.view')}
       </button>
     </div>
   </div>
@@ -285,15 +292,15 @@
         <input type="radio" checked={activeSystemPromptId === prompt.id} readonly />
         <div class="bds-prompt-info">
           <span class="bds-prompt-name">{prompt.name}</span>
-          <span class="bds-prompt-status">Custom saved prompt</span>
+          <span class="bds-prompt-status">{t('settings.customPromptStatus')}</span>
         </div>
       </label>
       <div class="bds-prompt-actions">
-        <button class="bds-btn-outlined" style="font-size: 11px; padding: 4px 8px;" title="Edit" onclick={() => openPromptEditor(prompt)}>
-          Edit
+        <button class="bds-btn-outlined" style="font-size: 11px; padding: 4px 8px;" title={t('settings.edit')} onclick={() => openPromptEditor(prompt)}>
+          {t('settings.edit')}
         </button>
-        <button class="bds-btn-danger" title="Delete" onclick={() => deletePrompt(prompt.id)}>
-          Delete
+        <button class="bds-btn-danger" title={t('settings.delete')} onclick={() => deletePrompt(prompt.id)}>
+          {t('settings.delete')}
         </button>
       </div>
     </div>
@@ -301,7 +308,7 @@
 
   <button class="bds-add-prompt-btn" type="button" onclick={() => openPromptEditor()}>
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="margin-right: 4px;"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    Add New System Prompt
+    {t('settings.addNewPrompt')}
   </button>
 </div>
 
@@ -309,31 +316,31 @@
   <div class="bds-modal-overlay">
     <div class="bds-modal">
       <div class="bds-modal-header">
-        <div class="ds-modal-content__title">{promptEditorIsNew ? 'Add New Prompt' : (editingPrompt?.readonly ? 'View Prompt' : 'Edit Prompt')}</div>
+        <div class="ds-modal-content__title">{promptEditorIsNew ? t('settings.addNewTitle') : (editingPrompt?.readonly ? t('settings.viewTitle') : t('settings.editTitle'))}</div>
         <button class="bds-modal-close" onclick={closePromptEditor}>×</button>
       </div>
       
       <div class="bds-modal-body">
         <div class="bds-field">
-          <label class="bds-label">Name</label>
-          <input type="text" class="bds-input" bind:value={promptEditorName} placeholder="e.g. My Custom Rules" readonly={editingPrompt?.readonly} />
+          <label class="bds-label">{t('settings.nameLabel')}</label>
+          <input type="text" class="bds-input" bind:value={promptEditorName} placeholder={t('settings.namePlaceholder')} readonly={editingPrompt?.readonly} />
         </div>
         
         <div class="bds-field">
           <div class="bds-label-row">
-            <label class="bds-label">Content</label>
+            <label class="bds-label">{t('settings.contentLabel')}</label>
             {#if !editingPrompt?.readonly}
-              <button class="bds-reset-btn" type="button" onclick={baseOnDefault}>Base on Default</button>
+              <button class="bds-reset-btn" type="button" onclick={baseOnDefault}>{t('settings.baseOnDefault')}</button>
             {/if}
           </div>
-          <textarea class="bds-input" style="min-height: 240px;" bind:value={promptEditorContent} placeholder="System instructions here..." readonly={editingPrompt?.readonly}></textarea>
+          <textarea class="bds-input" style="min-height: 240px;" bind:value={promptEditorContent} placeholder={t('settings.contentPlaceholder')} readonly={editingPrompt?.readonly}></textarea>
         </div>
       </div>
 
       <div class="bds-modal-footer">
-        <button class="bds-btn-outlined" onclick={closePromptEditor}>Cancel</button>
+        <button class="bds-btn-outlined" onclick={closePromptEditor}>{t('settings.cancel')}</button>
         {#if !editingPrompt?.readonly}
-          <button class="bds-btn" onclick={savePrompt}>Save Prompt</button>
+          <button class="bds-btn" onclick={savePrompt}>{t('settings.savePrompt')}</button>
         {/if}
       </div>
     </div>
@@ -343,7 +350,7 @@
 {#if activeProject}
   <div class="bds-label-row" style="margin-top: 12px;">
     <label class="bds-label" for="bds-project-instructions">
-      Project Instructions — <em style="font-weight: 400; opacity: 0.7;"
+      {t('settings.projectInstructions')} — <em style="font-weight: 400; opacity: 0.7;"
         >{activeProject.name}</em
       >
     </label>
@@ -354,10 +361,31 @@
     spellcheck="false"
     bind:value={projectInstructions}
     oninput={scheduleProjectSave}
-    placeholder="Custom instructions appended to the global system prompt for this project…"
+    placeholder={t('settings.projectInstructionsPlaceholder')}
   ></textarea>
-  <p style="font-size: 10px; opacity: 0.5; margin: 2px 0 12px;">Auto-saved</p>
+  <p style="font-size: 10px; opacity: 0.5; margin: 2px 0 12px;">{t('settings.autoSaved')}</p>
 {/if}
+
+<div class="bds-section-title" style="margin-top: 16px;">{t('settings.languageSettings')}</div>
+<div class="bds-list" style="margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--bds-border); border-radius: 12px; background: rgba(255, 255, 255, 0.02);">
+  <div class="bds-toggle-row" style="margin: 0; padding: 0; border: none;">
+    <span class="bds-toggle-label">{t('settings.syncLocale')}</span>
+    <label class="bds-switch">
+      <input type="checkbox" bind:checked={syncLocale} />
+      <span class="bds-switch-track"></span>
+    </label>
+  </div>
+
+  {#if !syncLocale}
+    <div class="bds-toggle-row" style="margin: 0; padding: 10px 0 0; border-top: 1px solid rgba(255, 255, 255, 0.05); justify-content: space-between; align-items: center;">
+      <span class="bds-toggle-label">{t('settings.selectLanguage')}</span>
+      <select class="bds-select" bind:value={locale} style="width: 140px;">
+        <option value="en">{t('language.en')}</option>
+        <option value="tr">{t('language.tr')}</option>
+      </select>
+    </div>
+  {/if}
+</div>
 
 <button
   type="button"
@@ -365,7 +393,7 @@
   class:open={advancedOpen}
   onclick={() => (advancedOpen = !advancedOpen)}
 >
-  Advanced Settings
+  {t('settings.advancedSettings')}
   <span class="bds-chevron">
     <svg
       width="12"
@@ -388,7 +416,7 @@
 <div class="bds-advanced-content" class:open={advancedOpen}>
   <div class="bds-advanced-inner">
     <div class="bds-toggle-row">
-      <span class="bds-toggle-label">Project Auto-Context (Local RAG)</span>
+      <span class="bds-toggle-label">{t('settings.projectAutoContext')}</span>
       <label class="bds-switch">
         <input
           id="bds-project-rag"
@@ -404,21 +432,21 @@
         class="bds-toggle-row"
         style="flex-direction: column; align-items: flex-start; gap: 6px; padding-left: 12px; border-left: 2px solid rgba(255, 255, 255, 0.1); margin-left: 4px;"
       >
-        <span class="bds-toggle-label">Max RAG Chunks to Inject</span>
+        <span class="bds-toggle-label">{t('settings.ragChunks')}</span>
         <select class="bds-select" bind:value={projectRagLimit}>
-          <option value={3}>3 chunks (~600 words)</option>
-          <option value={5}>5 chunks (~1000 words)</option>
-          <option value={8}>8 chunks (~1600 words)</option>
-          <option value={10}>10 chunks (~2000 words)</option>
+          <option value={3}>{t('settings.ragChunks3')}</option>
+          <option value={5}>{t('settings.ragChunks5')}</option>
+          <option value={8}>{t('settings.ragChunks8')}</option>
+          <option value={10}>{t('settings.ragChunks10')}</option>
         </select>
         <p style="font-size: 10px; opacity: 0.5; margin: 0;">
-          Automatically retrieves relevant pieces from your project files.
+          {t('settings.ragHint')}
         </p>
       </div>
     {/if}
 
     <div class="bds-toggle-row" style="flex-wrap: wrap;">
-      <span class="bds-toggle-label">Process .gitignore during upload</span>
+      <span class="bds-toggle-label">{t('settings.processGitignore')}</span>
       <label class="bds-switch">
         <input
           id="bds-gitignore-upload"
@@ -430,7 +458,7 @@
     </div>
 
     <div class="bds-toggle-row">
-      <span class="bds-toggle-label">Auto download create_file outputs</span>
+      <span class="bds-toggle-label">{t('settings.autoDownloadFiles')}</span>
       <label class="bds-switch">
         <input id="bds-auto-files" type="checkbox" bind:checked={autoFiles} />
         <span class="bds-switch-track"></span>
@@ -438,7 +466,7 @@
     </div>
 
     <div class="bds-toggle-row">
-      <span class="bds-toggle-label">Disable Hidden System Prompt</span>
+      <span class="bds-toggle-label">{t('settings.disableSystemPrompt')}</span>
       <label class="bds-switch">
         <input
           id="bds-disable-prompt"
@@ -450,7 +478,7 @@
     </div>
 
     <div class="bds-toggle-row">
-      <span class="bds-toggle-label">Disable Stored Memory Injection</span>
+      <span class="bds-toggle-label">{t('settings.disableMemory')}</span>
       <label class="bds-switch">
         <input
           id="bds-disable-memory"
@@ -462,11 +490,11 @@
     </div>
 
     <div class="bds-toggle-row">
-      <span class="bds-toggle-label">System Prompt Injection Frequency</span>
+      <span class="bds-toggle-label">{t('settings.injectionFrequency')}</span>
       <select class="bds-select" bind:value={systemPromptInjectionFrequency}>
-        <option value="first">Only on first message</option>
-        <option value="always">Always (every message)</option>
-        <option value="every_x">Every N messages</option>
+        <option value="first">{t('settings.firstMessage')}</option>
+        <option value="always">{t('settings.everyMessage')}</option>
+        <option value="every_x">{t('settings.everyNMessages')}</option>
       </select>
     </div>
 
@@ -475,7 +503,7 @@
         class="bds-toggle-row"
         style="flex-direction: column; align-items: flex-start; gap: 6px; padding-left: 12px; border-left: 2px solid rgba(255, 255, 255, 0.1); margin-left: 4px;"
       >
-        <span class="bds-toggle-label">Injection Interval (N)</span>
+        <span class="bds-toggle-label">{t('settings.injectionInterval')}</span>
         <input
           id="bds-injection-interval"
           type="number"
@@ -485,13 +513,13 @@
           bind:value={systemPromptInjectionInterval}
         />
         <p style="font-size: 10px; opacity: 0.5; margin: 0;">
-          Inject the prompt every {systemPromptInjectionInterval} messages.
+          {t('settings.injectEveryN', { n: systemPromptInjectionInterval })}
         </p>
       </div>
     {/if}
 
     <div class="bds-toggle-row">
-      <span class="bds-toggle-label">Voice Mode (Auto-read responses)</span>
+      <span class="bds-toggle-label">{t('settings.voiceMode')}</span>
       <label class="bds-switch">
         <input id="bds-voice-mode" type="checkbox" bind:checked={voiceMode} />
         <span class="bds-switch-track"></span>
@@ -499,7 +527,7 @@
     </div>
 
     <div class="bds-toggle-row">
-      <span class="bds-toggle-label">Auto-submit after speech</span>
+      <span class="bds-toggle-label">{t('settings.autoSubmitVoice')}</span>
       <label class="bds-switch">
         <input
           id="bds-voice-autosubmit"
@@ -511,7 +539,7 @@
     </div>
 
     <div class="bds-toggle-row">
-      <span class="bds-toggle-label">Speech Language</span>
+      <span class="bds-toggle-label">{t('settings.speechLanguage')}</span>
       <select class="bds-select" bind:value={voiceLanguage}>
         <option value="en-US">English (US)</option>
         <option value="en-GB">English (UK)</option>
@@ -526,7 +554,7 @@
     </div>
 
     <div class="bds-toggle-row">
-      <span class="bds-toggle-label">Auto download LONG_WORK zip</span>
+      <span class="bds-toggle-label">{t('settings.autoDownloadZip')}</span>
       <label class="bds-switch">
         <input id="bds-auto-zip" type="checkbox" bind:checked={autoZip} />
         <span class="bds-switch-track"></span>
@@ -537,17 +565,17 @@
       class="bds-toggle-row"
       style="flex-direction: column; align-items: flex-start; gap: 6px;"
     >
-      <span class="bds-toggle-label">Preferred Response Language</span>
+      <span class="bds-toggle-label">{t('settings.preferredLang')}</span>
       <input
         id="bds-preferred-lang"
         type="text"
         class="bds-input"
         style="width: 100%; box-sizing: border-box;"
-        placeholder="e.g. English, Turkish, Pirate"
+        placeholder={t('settings.preferredLangPlaceholder')}
         bind:value={preferredLang}
       />
       <p style="font-size: 10px; opacity: 0.5; margin: 0;">
-        Leave empty to let the model decide.
+        {t('settings.preferredLangHint')}
       </p>
     </div>
 
@@ -555,7 +583,7 @@
       class="bds-toggle-row"
       style="flex-direction: column; align-items: flex-start; gap: 6px;"
     >
-      <span class="bds-toggle-label">Markdown Walker Max Depth</span>
+      <span class="bds-toggle-label">{t('settings.markdownMaxDepth')}</span>
       <input
         id="bds-html-md-depth"
         type="number"
@@ -566,10 +594,7 @@
         bind:value={htmlToMarkdownMaxDepth}
       />
       <p style="font-size: 10px; opacity: 0.5; margin: 0;">
-        Hard cap on DOM recursion depth when reconstructing markdown from a
-        message. Lower = safer against stack overflow on deeply nested content;
-        higher = preserves structure of pathologically nested messages. Default
-        200.
+        {t('settings.markdownMaxDepthHint')}
       </p>
     </div>
 
@@ -577,7 +602,7 @@
       class="bds-toggle-row"
       style="flex-direction: column; align-items: flex-start; gap: 6px;"
     >
-      <span class="bds-toggle-label">Chat Session List Cap</span>
+      <span class="bds-toggle-label">{t('settings.chatSessionCap')}</span>
       <input
         id="bds-max-chat-sessions"
         type="number"
@@ -588,9 +613,7 @@
         bind:value={maxChatSessions}
       />
       <p style="font-size: 10px; opacity: 0.5; margin: 0;">
-        Maximum number of chat sessions kept in memory for the sidebar. Older
-        sessions beyond this cap are evicted (FIFO). Lower values reduce memory
-        usage on long-lived tabs. Default 500.
+        {t('settings.chatSessionCapHint')}
       </p>
     </div>
 
@@ -598,14 +621,14 @@
       class="bds-toggle-row"
       style="flex-direction: column; align-items: flex-start; gap: 8px;"
     >
-      <span class="bds-toggle-label">GitHub Personal Access Token</span>
+      <span class="bds-toggle-label">{t('settings.githubToken')}</span>
       <div class="bds-token-field">
         <input
           id="bds-github-token"
           type="text"
           class="bds-input bds-token-text"
           style="width: 100%; box-sizing: border-box;"
-          placeholder="ghp_..."
+          placeholder={t('settings.githubTokenPlaceholder')}
           value={getGithubTokenDisplayValue()}
           readonly={!showGithubToken}
           oninput={(e) => {
@@ -623,7 +646,7 @@
             class="bds-btn-outlined bds-token-btn"
             onclick={() => (showGithubToken = !showGithubToken)}
           >
-            {showGithubToken ? "Hide" : "Show"}
+            {showGithubToken ? t('settings.githubTokenHide') : t('settings.githubTokenShow')}
           </button>
           <button
             type="button"
@@ -634,30 +657,29 @@
             }}
             disabled={!githubToken}
           >
-            Clear
+            {t('settings.githubTokenClear')}
           </button>
         </div>
       </div>
       <p class="bds-token-help">
-        Create a classic token with <code>repo</code> scope at GitHub Settings ->
-        Tokens.
+        {t('settings.githubTokenHelp')}
       </p>
     </div>
     <div class="bds-toggle-row">
-      <span class="bds-toggle-label">Token Price Estimation (Experimental)</span>
+      <span class="bds-toggle-label">{t('settings.tokenPriceEstimation')}</span>
       <label class="bds-switch">
         <input id="bds-token-price" type="checkbox" bind:checked={tokenPriceDisplay} />
         <span class="bds-switch-track"></span>
       </label>
     </div>
     <p style="font-size: 10px; opacity: 0.5; margin: -8px 0 8px; padding-left: 0;">
-      Shows estimated DeepSeek API cost per message and session total. Input/output token prices are used for estimation. Pricing data is fetched dynamically with fallbacks.
+      {t('settings.tokenPriceHint')}
     </p>
   </div>
 </div>
 
 <button id="bds-save-settings" type="button" onclick={save}>
-  Save Settings
+  {t('settings.save')}
 </button>
 
 <style>

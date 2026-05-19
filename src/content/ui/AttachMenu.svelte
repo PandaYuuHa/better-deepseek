@@ -26,44 +26,45 @@
   import { pushConfigToPage } from "../bridge.js";
   import appState from "../state.js";
   import { BRIDGE_EVENTS } from "../../lib/constants.js";
+  import { t } from "../../lib/i18n.svelte.js";
 
   // The native input[type="file"] reference passed from scanner
-  export let nativeInput;
+  let { nativeInput } = $props();
 
-  let isOpen = false;
+  let isOpen = $state(false);
   let menuRef;
-  let dropdownStyle = "";
+  let dropdownStyle = $state("");
 
   // GitHub dialog state
-  let showGithubDialog = false;
-  let githubUrl = "";
-  let githubStatus = "";
-  let githubLoading = false;
-  let githubError = "";
-  let includeCommits = false;
-  let commitCountInput = "";
+  let showGithubDialog = $state(false);
+  let githubUrl = $state("");
+  let githubStatus = $state("");
+  let githubLoading = $state(false);
+  let githubError = $state("");
+  let includeCommits = $state(false);
+  let commitCountInput = $state("");
 
   // Web Import dialog state
-  let showWebDialog = false;
-  let webUrl = "";
-  let webStatus = "";
-  let webLoading = false;
-  let webError = "";
+  let showWebDialog = $state(false);
+  let webUrl = $state("");
+  let webStatus = $state("");
+  let webLoading = $state(false);
+  let webError = $state("");
 
   let dialogRef;
 
   // Project panel (folder button) state
-  let showProjectPanel = false;
-  let projectPanelStyle = "";
+  let showProjectPanel = $state(false);
+  let projectPanelStyle = $state("");
   let projectBtnRef;
   let projectPanelRef;
-  let panelProjects = [...appState.projects];
-  let panelActiveProjectId = "";
-  let panelFiles = [];
-  let panelTickedIds = [];
+  let panelProjects = $state([...appState.projects]);
+  let panelActiveProjectId = $state("");
+  let panelFiles = $state([]);
+  let panelTickedIds = $state([]);
 
   // Speech Recognition state
-  let isRecording = false;
+  let isRecording = $state(false);
   let recognition = null;
 
   // Replaced at build time by Vite's `define` (see build.js sharedDefine).
@@ -103,7 +104,7 @@
       window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       if (appState.ui)
-        appState.ui.showToast("Browser does not support Speech Recognition.");
+        appState.ui.showToast(t('attachMenu.noSpeechRecognition'));
       return;
     }
 
@@ -131,7 +132,7 @@
     recognition.onerror = (event) => {
       console.error("Speech Recognition Error:", event.error);
       isRecording = false;
-      if (appState.ui) appState.ui.showToast(`Voice Error: ${event.error}`);
+      if (appState.ui) appState.ui.showToast(t('attachMenu.voiceError', { msg: event.error }));
     };
 
     recognition.onend = () => {
@@ -151,7 +152,7 @@
 
     if (!textarea) {
       if (isFinal && appState.ui)
-        appState.ui.showToast("Could not find input field.");
+        appState.ui.showToast(t('attachMenu.noInputField'));
       return;
     }
 
@@ -298,7 +299,7 @@
         }
       } catch (err) {
         if (appState.ui) {
-          appState.ui.showToast(err?.message || "File pick failed.");
+          appState.ui.showToast(err?.message || t('attachMenu.filePickFailed'));
         }
       }
       return;
@@ -328,11 +329,11 @@
           }
         } catch (err) {
           if (appState.ui) {
-            appState.ui.showToast(err?.message || "Folder pick failed.");
+            appState.ui.showToast(err?.message || t('attachMenu.folderPickFailed'));
           }
         }
       } else if (appState.ui) {
-        appState.ui.showToast("Folder upload requires a newer version of the app.");
+        appState.ui.showToast(t('attachMenu.folderRequiresNewer'));
       }
       return;
     }
@@ -351,7 +352,7 @@
 
       console.error("[AttachMenu] Folder upload failed:", err);
       if (appState.ui) {
-        appState.ui.showToast(err?.message || "Folder upload failed.");
+        appState.ui.showToast(t('attachMenu.folderUploadFailed', { msg: err?.message || '' }));
       }
     }
   }
@@ -376,8 +377,7 @@
 
     const parsed = parseGitHubUrl(githubUrl);
     if (!parsed) {
-      githubError =
-        "Invalid URL. Use: https://github.com/owner/repo or owner/repo";
+      githubError = t('attachMenu.invalidGithubUrl');
       return;
     }
 
@@ -424,7 +424,7 @@
         } catch (error) {
           if (appState.ui) {
             appState.ui.showToast(
-              error?.message || "Failed to fetch commit history.",
+              t('attachMenu.commitsFailed', { msg: error?.message || '' }),
             );
           }
         }
@@ -434,7 +434,7 @@
         showGithubDialog = false;
       }
     } catch (err) {
-      githubError = err.message || "Failed to fetch repository.";
+      githubError = t('attachMenu.repoFailed', { msg: err.message || '' });
     } finally {
       githubLoading = false;
     }
@@ -455,7 +455,7 @@
     try {
       new URL(webUrl); // Basic validation
     } catch {
-      webError = "Please enter a valid URL (including http/https).";
+      webError = t('attachMenu.invalidWebUrl');
       return;
     }
 
@@ -472,7 +472,7 @@
         injectFile(file);
       }
     } catch (err) {
-      webError = err.message || "Could not fetch page content.";
+      webError = t('attachMenu.webFetchFailed', { msg: err.message || '' });
     } finally {
       webLoading = false;
     }
@@ -594,7 +594,7 @@
 </script>
 
 <div class="bds-attach-wrapper" bind:this={menuRef}>
-  <button class="bds-plus-btn" on:click={toggleMenu} title="Advanced Upload">
+  <button class="bds-plus-btn" on:click={toggleMenu} title={t('attachMenu.buttonTitle')}>
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="20"
@@ -615,7 +615,7 @@
     class="bds-project-btn"
     bind:this={projectBtnRef}
     on:click={openProjectPanel}
-    title="Attach Project"
+    title={t('attachMenu.attachProject')}
   >
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -639,7 +639,7 @@
     <button
       class="bds-mic-btn {isRecording ? 'bds-recording' : ''}"
       on:click={toggleSpeechRecognition}
-      title={isRecording ? "Stop Recording" : "Voice Prompt"}
+      title={isRecording ? t('attachMenu.stopRecording') : t('attachMenu.voicePrompt')}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -692,7 +692,7 @@
             y2="12"
           ></line><line x1="9" y1="15" x2="15" y2="15"></line></svg
         >
-        Upload File
+        {t('attachMenu.uploadFile')}
       </button>
       {#if supportsFolderUpload}
         <button class="bds-attach-item" on:click={handleUploadFolder}>
@@ -716,7 +716,7 @@
               y2="14"
             ></line></svg
           >
-          Upload Folder
+          {t('attachMenu.uploadFolder')}
         </button>
       {/if}
       <div class="bds-attach-divider"></div>
@@ -733,12 +733,12 @@
           ></path></svg
         >
         <span class="bds-attach-item-label">
-          <span>GitHub Repo</span>
+          <span>{t('attachMenu.githubRepo')}</span>
           {#if hasGithubToken()}
             <span
               class="bds-github-auth-icon"
-              aria-label="Authenticated GitHub access"
-              title="Authenticated GitHub access"
+              aria-label={t('attachMenu.githubAuthLabel')}
+              title={t('attachMenu.githubAuthLabel')}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -779,7 +779,7 @@
             d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
           ></path></svg
         >
-        Fetch Web Page
+        {t('attachMenu.fetchWebPage')}
       </button>
     </div>
   {/if}
@@ -813,7 +813,7 @@
             d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
           ></path></svg
         >
-        <span>GitHub Repo Import</span>
+        <span>{t('attachMenu.githubImportTitle')}</span>
         {#if hasGithubToken()}
           <span class="bds-github-auth-pill">
             <svg
@@ -830,7 +830,7 @@
               <rect x="5" y="11" width="14" height="10" rx="2"></rect>
               <path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
             </svg>
-            Authenticated
+            {t('attachMenu.authenticated')}
           </span>
         {/if}
         {#if !githubLoading}
@@ -845,7 +845,7 @@
         <input
           class="bds-github-input"
           type="text"
-          placeholder="https://github.com/owner/repo or owner/repo"
+          placeholder={t('attachMenu.githubPlaceholder')}
           bind:value={githubUrl}
           on:keydown={(e) => handleDialogKeydown(e, "github")}
           disabled={githubLoading}
@@ -858,12 +858,12 @@
             bind:checked={includeCommits}
             disabled={githubLoading}
           />
-          <span>Include commit history</span>
+          <span>{t('attachMenu.includeCommits')}</span>
         </label>
 
         {#if includeCommits}
           <label class="bds-github-number">
-            <span>Number of commits:</span>
+            <span>{t('attachMenu.commitsLabel')}</span>
             <input
               class="bds-github-number-input"
               type="number"
@@ -898,14 +898,14 @@
           }}
           disabled={githubLoading}
         >
-          Close
+          {t('attachMenu.close')}
         </button>
         <button
           class="bds-github-btn bds-github-btn-import"
           on:click={submitGithubUrl}
           disabled={githubLoading || !githubUrl.trim()}
         >
-          {githubLoading ? "Fetching..." : "Fetch"}
+          {githubLoading ? t('attachMenu.fetching') : t('attachMenu.fetch')}
         </button>
       </div>
     </div>
@@ -923,13 +923,13 @@
     on:click|stopPropagation
   >
     <div class="bds-pp-header">
-      <span class="bds-pp-label">Project</span>
+      <span class="bds-pp-label">{t('attachMenu.projectLabel')}</span>
       <select
         class="bds-pp-select"
         value={panelActiveProjectId}
         on:change={handlePanelProjectChange}
       >
-        <option value="">None</option>
+        <option value="">{t('attachMenu.noProject')}</option>
         {#each panelProjects as p (p.id)}
           <option value={p.id}>{p.name}</option>
         {/each}
@@ -937,18 +937,18 @@
     </div>
 
     <p class="bds-pp-hint">
-      Instructions from selected project apply at first message only.
+      {t('attachMenu.projectHint')}
     </p>
 
     {#if panelActiveProjectId && panelFiles.length > 0}
       <div class="bds-pp-files-header">
         <span class="bds-pp-files-count"
-          >{panelFiles.length} file{panelFiles.length === 1 ? "" : "s"}</span
+          >{panelFiles.length} {panelFiles.length === 1 ? t('attachMenu.file') : t('attachMenu.files')}</span
         >
         <button class="bds-pp-select-all" on:click={toggleSelectAll}>
           {panelTickedIds.length === panelFiles.length
-            ? "Deselect all"
-            : "Select all"}
+            ? t('attachMenu.deselectAll')
+            : t('attachMenu.selectAll')}
         </button>
       </div>
       <div class="bds-pp-files">
@@ -1003,14 +1003,14 @@
                 d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"
               />
             </svg>
-            Attach ({panelTickedIds.length})
+            {t('attachMenu.attach', { count: panelTickedIds.length })}
           </button>
         </div>
       {/if}
     {:else if panelActiveProjectId}
-      <p class="bds-pp-empty">No files — add via Manage Projects</p>
+      <p class="bds-pp-empty">{t('attachMenu.noFiles')}</p>
     {:else}
-      <p class="bds-pp-empty">No project selected</p>
+      <p class="bds-pp-empty">{t('attachMenu.noProjectSelected')}</p>
     {/if}
   </div>
 {/if}
@@ -1051,7 +1051,7 @@
             d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
           ></path></svg
         >
-        <span>Fetch Web Page</span>
+        <span>{t('attachMenu.webImportTitle')}</span>
         {#if !webLoading}
           <button
             class="bds-github-close"
@@ -1064,7 +1064,7 @@
         <input
           class="bds-github-input"
           type="text"
-          placeholder="https://example.com/article"
+          placeholder={t('attachMenu.webPlaceholder')}
           bind:value={webUrl}
           on:keydown={(e) => handleDialogKeydown(e, "web")}
           disabled={webLoading}
@@ -1091,14 +1091,14 @@
           }}
           disabled={webLoading}
         >
-          Close
+          {t('attachMenu.close')}
         </button>
         <button
           class="bds-github-btn bds-github-btn-import"
           on:click={submitWebUrl}
           disabled={webLoading || !webUrl.trim()}
         >
-          {webLoading ? "Fetching..." : "Fetch"}
+          {webLoading ? t('attachMenu.fetching') : t('attachMenu.fetch')}
         </button>
       </div>
     </div>

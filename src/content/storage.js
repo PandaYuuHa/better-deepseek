@@ -13,6 +13,7 @@ import {
 } from "../lib/constants.js";
 import { makeId } from "../lib/utils/helpers.js";
 import { setHtmlToMarkdownMaxDepth } from "./dom/message-text.js";
+import { i18n } from "../lib/i18n.svelte.js";
 
 // ── Load ──
 
@@ -312,6 +313,10 @@ export function bindStorageChangeListener() {
       state.settings.customSystemPrompts = normalizeCustomSystemPrompts(state.settings.customSystemPrompts);
       setHtmlToMarkdownMaxDepth(state.settings.htmlToMarkdownMaxDepth);
       setMaxChatSessions(state.settings.maxChatSessions);
+
+      // Re-initialize i18n locale
+      i18n.init(state.settings.syncLocale ? null : state.settings.locale);
+
       if (state.ui) {
         state.ui.refreshSettings();
       }

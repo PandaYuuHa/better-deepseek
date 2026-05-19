@@ -28,6 +28,7 @@ import { checkPendingExport } from "./tools/pending-export.js";
 import { initPricing } from "../lib/pricing.js";
 import { startStatusMonitor } from "./status-monitor.js";
 import { startThemeWatcher } from "./theme.js";
+import { i18n } from "../lib/i18n.svelte.js";
 
 const CONTENT_BOOTSTRAP_KEY = "__bdsContentBootstrapped";
 
@@ -41,6 +42,9 @@ if (!window[CONTENT_BOOTSTRAP_KEY]) {
 async function init() {
   await waitForBody();
   await loadStateFromStorage();
+
+  // Initialize localization locale
+  i18n.init(state.settings.syncLocale ? null : state.settings.locale);
 
   injectHookScript();
   setupBridgeEvents();
