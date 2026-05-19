@@ -9,6 +9,7 @@
 import state from "./state.js";
 import { STORAGE_KEYS } from "../lib/constants.js";
 import { makeId } from "../lib/utils/helpers.js";
+import { unlinkDirectory } from "../lib/local-directory-source.js";
 
 // ── Private storage helpers ──
 
@@ -28,6 +29,7 @@ export async function createProject(name, description = "") {
     name: String(name).trim(),
     description: String(description || "").trim(),
     customInstructions: "",
+    linkedDirId: null,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -46,6 +48,11 @@ export async function updateProject(id, updates) {
 }
 
 export async function deleteProject(id) {
+  const project = state.projects.find((p) => p.id === id);
+  if (project && project.linkedDirId) {
+    unlinkDirectory(project.linkedDirId).catch(() => {});
+  }
+
   state.projects = state.projects.filter((p) => p.id !== id);
   state.projectFiles = state.projectFiles.filter((f) => f.projectId !== id);
 
@@ -55,6 +62,28 @@ export async function deleteProject(id) {
   }
 
   await Promise.all([saveProjects(), saveProjectFiles()]);
+}
+
+export function setProjectLinkedDir(id, linkedDirId) {
+  const index = state.projects.findIndex((p) => p.id === id);
+  if (index === -1) return;
+  state.projects = state.projects.map((p, i) =>
+    i === index ? { ...p, linkedDirId, updatedAt: Date.now() } : p
+  );
+  saveProjects();
+}
+
+export function clearProjectLinkedDir(id) {
+  const index = state.projects.findIndex((p) => p.id === id);
+  if (index === -1) return;
+  const project = state.projects[index];
+  if (project && project.linkedDirId) {
+    unlinkDirectory(project.linkedDirId).catch(() => {});
+  }
+  state.projects = state.projects.map((p, i) =>
+    i === index ? { ...p, linkedDirId: null, updatedAt: Date.now() } : p
+  );
+  saveProjects();
 }
 
 export function setActiveProject(id) {

@@ -7,6 +7,8 @@
     addProjectFilesBatch,
     deleteProjectFile,
     getFilesForProject,
+    setProjectLinkedDir,
+    clearProjectLinkedDir,
   } from "../project-manager.js";
   import { pushConfigToPage } from "../bridge.js";
   import { pickFolderSelection } from "../../lib/utils/folder-picker.js";
@@ -15,6 +17,13 @@
     isNativeFilePickerAvailable,
     nativePickFiles,
   } from "../../platform/android-file-picker.js";
+  import {
+    supportsLocalDirectoryLinking,
+    linkDirectory,
+    unlinkDirectory,
+    getLinkedDirectoryInfo,
+    refreshDirectoryCache,
+  } from "../../lib/local-directory-source.js";
 
   let { onback } = $props();
 
@@ -48,6 +57,11 @@
   let fileError = $state("");
   let uploading = $state(false);
 
+  // Local directory linking
+  let linkedDirInfo = $state(null);
+  let linkingDir = $state(false);
+  let linkDirError = $state("");
+
   export function refresh() {
     if (uploading) return;
     projects = [...appState.projects];
@@ -73,6 +87,7 @@
     showDeleteConfirm = false;
     fileError = "";
     view = "detail";
+    refreshLinkedDirInfo();
   }
 
   function goBack() {
@@ -342,6 +357,51 @@
     await deleteProjectFile(file.id);
     projectFiles = getFilesForProject(selectedProject.id);
     pushConfigToPage();
+  }
+
+  async function refreshLinkedDirInfo() {
+    if (!selectedProject) { linkedDirInfo = null; return; }
+    try {
+      const info = await getLinkedDirectoryInfo(selectedProject.id);
+      linkedDirInfo = info;
+    } catch {
+      linkedDirInfo = null;
+    }
+  }
+
+  async function handleLinkDirectory() {
+    if (!selectedProject) return;
+    linkingDir = true;
+    linkDirError = "";
+    try {
+      const dirInfo = await linkDirectory(selectedProject.id);
+      setProjectLinkedDir(selectedProject.id, selectedProject.id);
+      linkedDirInfo = await getLinkedDirectoryInfo(selectedProject.id);
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        linkDirError = err?.message || "Failed to link directory.";
+      }
+    } finally {
+      linkingDir = false;
+      projects = [...appState.projects];
+    }
+  }
+
+  async function handleUnlinkDirectory() {
+    if (!selectedProject) return;
+    clearProjectLinkedDir(selectedProject.id);
+    linkedDirInfo = null;
+    projects = [...appState.projects];
+  }
+
+  async function handleRefreshDirectory() {
+    if (!selectedProject) return;
+    try {
+      await refreshDirectoryCache(selectedProject.id);
+      linkedDirInfo = await getLinkedDirectoryInfo(selectedProject.id);
+    } catch (err) {
+      linkDirError = err?.message || "Failed to refresh directory.";
+    }
   }
 
   function formatSize(bytes) {
@@ -620,6 +680,59 @@
     Plain text files only. Max 500 KB per file.
   </p>
 
+  <!-- Local Directory Linking -->
+  {#if supportsLocalDirectoryLinking()}
+    <hr style="margin: 12px 0;" />
+    <div class="bds-subsection-title" style="margin-bottom: 6px;">Local Directory</div>
+
+    {#if linkDirError}
+      <p class="bds-field-error">{linkDirError}</p>
+    {/if}
+
+    {#if linkedDirInfo}
+      <div class="bds-linked-dir-status">
+        <span class="bds-linked-dir-name">{linkedDirInfo.rootName}</span>
+        <span class="bds-linked-dir-meta">
+          {linkedDirInfo.fileCount} file{linkedDirInfo.fileCount !== 1 ? "s" : ""}
+          {#if !linkedDirInfo.hasPermission}
+            <span class="bds-linked-dir-warning">(permission lost — re-link)</span>
+          {/if}
+        </span>
+      </div>
+      <div class="bds-linked-dir-actions">
+        <button
+          type="button"
+          class="bds-btn-outlined"
+          style="font-size: 10px; padding: 2px 7px;"
+          onclick={handleRefreshDirectory}
+        >
+          Refresh
+        </button>
+        <button
+          type="button"
+          class="bds-btn-danger"
+          style="font-size: 10px; padding: 2px 7px;"
+          onclick={handleUnlinkDirectory}
+        >
+          Unlink
+        </button>
+      </div>
+    {:else}
+      <button
+        type="button"
+        class="bds-btn-outlined"
+        style="width: 100%;"
+        onclick={handleLinkDirectory}
+        disabled={linkingDir}
+      >
+        {linkingDir ? "Selecting directory…" : "+ Link Local Directory"}
+      </button>
+      <p style="font-size: 10px; opacity: 0.45; margin: 4px 0 0;">
+        Files are read live from your filesystem (not copied). Chromium-based browsers only.
+      </p>
+    {/if}
+  {/if}
+
   <hr style="margin: 12px 0;" />
 
   <!-- Delete project -->
@@ -725,5 +838,37 @@
   /* ── Description textarea (smaller than custom instructions) ── */
   .bds-desc-input {
     min-height: 60px;
+  }
+
+  /* ── Linked directory status ── */
+  .bds-linked-dir-status {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    background: var(--bds-surface, #f8f8f8);
+    border: 1px solid var(--bds-border, #ddd);
+    border-radius: 6px;
+    margin-bottom: 6px;
+  }
+  .bds-linked-dir-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--bds-accent, #4f6ef7);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bds-linked-dir-meta {
+    font-size: 10px;
+    opacity: 0.6;
+  }
+  .bds-linked-dir-warning {
+    color: #e05252;
+    font-weight: 500;
+  }
+  .bds-linked-dir-actions {
+    display: flex;
+    gap: 6px;
   }
 </style>

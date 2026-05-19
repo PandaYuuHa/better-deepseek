@@ -246,6 +246,7 @@ export function normalizeProjects(raw) {
       name: String(item.name),
       description: String(item.description || ""),
       customInstructions: String(item.customInstructions || ""),
+      linkedDirId: item.linkedDirId || null,
       createdAt: Number(item.createdAt) || Date.now(),
       updatedAt: Number(item.updatedAt) || Date.now(),
     }));

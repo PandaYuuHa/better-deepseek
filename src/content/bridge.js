@@ -7,6 +7,7 @@ import { BRIDGE_EVENTS } from "../lib/constants.js";
 import { findLatestAssistantMessageNode, collectMessageNodes } from "./scanner.js";
 import { finalizeLongWork } from "./files/long-work.js";
 import { getActiveProject, getActiveFiles, getFilesForProject } from "./project-manager.js";
+import { getDirectoryFiles } from "../lib/local-directory-source.js";
 import { discoverTags } from "./tags/tag-manager.js";
 
 /**
@@ -119,56 +120,73 @@ function handleSessionData(data) {
 /**
  * Push current config (system prompt, skills, memories) to the MAIN world.
  */
-export function pushConfigToPage() {
-  const activeProject = getActiveProject();
-  let activeSystemPrompt = state.settings.systemPrompt || "";
-  if (state.settings.activeSystemPromptId && 
-      state.settings.activeSystemPromptId !== "default" && 
-      Array.isArray(state.settings.customSystemPrompts)) {
-    const custom = state.settings.customSystemPrompts.find(p => p.id === state.settings.activeSystemPromptId);
-    if (custom) {
-      activeSystemPrompt = custom.content;
-    }
-  }
-
-  const projectRagEnabled = Boolean(state.settings.projectRagEnabled);
-  const activeProjectFiles = activeProject
-    ? (projectRagEnabled ? getFilesForProject(activeProject.id) : getActiveFiles())
-    : [];
-
-  const detail = {
-    systemPrompt: String(activeSystemPrompt),
-    skills: state.skills
-      .filter((skill) => skill.active)
-      .map((skill) => ({ name: skill.name, content: skill.content })),
-    memories: Object.entries(state.memories).map(([key, item]) => ({
-      key,
-      value: item.value,
-      importance: item.importance,
-    })),
-    activeCharacter: state.characters.find(c => c.active) || null,
-    preferredLang: String(state.settings.preferredLang || ""),
-    disableSystemPrompt: Boolean(state.settings.disableSystemPrompt),
-    disableMemory: Boolean(state.settings.disableMemory),
-    systemPromptInjectionFrequency: String(state.settings.systemPromptInjectionFrequency || "first"),
-    systemPromptInjectionInterval: Number(state.settings.systemPromptInjectionInterval || 3),
-    projectRagEnabled,
-    projectRagLimit: Number(state.settings.projectRagLimit || 5),
-    activeProject: activeProject
-      ? {
-        name: activeProject.name,
-        instructions: activeProject.customInstructions,
-        files: activeProjectFiles.map((f) => ({ name: f.name, content: f.content })),
+export async function pushConfigToPage() {
+  try {
+    const activeProject = getActiveProject();
+    let activeSystemPrompt = state.settings.systemPrompt || "";
+    if (state.settings.activeSystemPromptId && 
+        state.settings.activeSystemPromptId !== "default" && 
+        Array.isArray(state.settings.customSystemPrompts)) {
+      const custom = state.settings.customSystemPrompts.find(p => p.id === state.settings.activeSystemPromptId);
+      if (custom) {
+        activeSystemPrompt = custom.content;
       }
-      : null,
-  };
+    }
 
-  window.dispatchEvent(
-    new CustomEvent(BRIDGE_EVENTS.configUpdate, {
-      // Stringify detail to cross the boundary in Firefox without Xray Vision issues
-      detail: JSON.stringify(detail)
-    })
-  );
+    const projectRagEnabled = Boolean(state.settings.projectRagEnabled);
+    const activeProjectFiles = activeProject
+      ? (projectRagEnabled ? getFilesForProject(activeProject.id) : getActiveFiles())
+      : [];
+
+    let localDirFiles = [];
+    if (activeProject && activeProject.linkedDirId) {
+      try {
+        const dirFiles = await getDirectoryFiles(activeProject.id);
+        if (dirFiles) {
+          localDirFiles = dirFiles;
+        }
+      } catch (e) {
+        console.warn("[BDS] Failed to read linked directory:", e);
+      }
+    }
+
+    const allFiles = [...activeProjectFiles, ...localDirFiles];
+
+    const detail = {
+      systemPrompt: String(activeSystemPrompt),
+      skills: state.skills
+        .filter((skill) => skill.active)
+        .map((skill) => ({ name: skill.name, content: skill.content })),
+      memories: Object.entries(state.memories).map(([key, item]) => ({
+        key,
+        value: item.value,
+        importance: item.importance,
+      })),
+      activeCharacter: state.characters.find(c => c.active) || null,
+      preferredLang: String(state.settings.preferredLang || ""),
+      disableSystemPrompt: Boolean(state.settings.disableSystemPrompt),
+      disableMemory: Boolean(state.settings.disableMemory),
+      systemPromptInjectionFrequency: String(state.settings.systemPromptInjectionFrequency || "first"),
+      systemPromptInjectionInterval: Number(state.settings.systemPromptInjectionInterval || 3),
+      projectRagEnabled,
+      projectRagLimit: Number(state.settings.projectRagLimit || 5),
+      activeProject: activeProject
+        ? {
+          name: activeProject.name,
+          instructions: activeProject.customInstructions,
+          files: allFiles.map((f) => ({ name: f.name, content: f.content })),
+        }
+        : null,
+    };
+
+    window.dispatchEvent(
+      new CustomEvent(BRIDGE_EVENTS.configUpdate, {
+        detail: JSON.stringify(detail)
+      })
+    );
+  } catch (e) {
+    console.warn("[BDS] pushConfigToPage failed:", e);
+  }
 }
 
 /**
