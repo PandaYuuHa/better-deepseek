@@ -64,6 +64,19 @@ class I18nManager {
   }
 
   /**
+   * Resets all locales back to their original bundled data
+   */
+  resetLocales() {
+    for (const [path, mod] of Object.entries(localeModules)) {
+      const code = path.match(/(\w+)\.json$/)[1];
+      const data = mod.default || mod;
+      if (data && data.messages) {
+        locales[code] = data;
+      }
+    }
+  }
+
+  /**
    * Updates the active locale, persisting it to chrome storage.
    * @param {string} lang Language code
    */

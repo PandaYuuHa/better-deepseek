@@ -390,7 +390,11 @@ export function bindStorageChangeListener() {
     }
 
     if (changes.bds_locale_updates) {
-      i18n.loadUpdatedLocales(changes.bds_locale_updates.newValue);
+      if (changes.bds_locale_updates.newValue) {
+        i18n.loadUpdatedLocales(changes.bds_locale_updates.newValue);
+      } else {
+        i18n.resetLocales();
+      }
     }
 
     pushConfigToPage();
