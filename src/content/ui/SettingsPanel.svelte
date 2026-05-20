@@ -493,54 +493,54 @@
 <div class="bds-advanced-content" class:open={advancedOpen}>
   <div class="bds-advanced-inner">
     <!-- Language Settings -->
-    <div style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 12px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; width: 100%;">
-      <span class="bds-toggle-label" style="font-weight: 600; opacity: 0.9;">{t('settings.languageSettings')}</span>
-      
-      <div class="bds-toggle-row" style="padding: 0; border: none; margin: 0;">
-        <span class="bds-toggle-label">{t('settings.syncLocale')}</span>
-        <label class="bds-switch">
-          <input type="checkbox" bind:checked={syncLocale} />
-          <span class="bds-switch-track"></span>
-        </label>
-      </div>
+    <div style="padding: 10px 0 6px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--bds-border);">
+      <span style="font-size: 13px; font-weight: 600; color: var(--bds-text-primary);">{t('settings.languageSettings')}</span>
+    </div>
+    
+    <div class="bds-toggle-row">
+      <span class="bds-toggle-label">{t('settings.syncLocale')}</span>
+      <label class="bds-switch">
+        <input type="checkbox" bind:checked={syncLocale} />
+        <span class="bds-switch-track"></span>
+      </label>
+    </div>
 
-      {#if !syncLocale}
-        <div class="bds-toggle-row" style="padding: 0; border: none; margin: 0; justify-content: space-between; align-items: center;">
-          <span class="bds-toggle-label">{t('settings.selectLanguage')}</span>
-          <select class="bds-select" bind:value={locale} style="width: 140px;">
-            {#each availableLocaleCodes as code}
-              <option value={code}>{t(`language.${code}`)}</option>
-            {/each}
-          </select>
-        </div>
+    {#if !syncLocale}
+      <div class="bds-toggle-row">
+        <span class="bds-toggle-label">{t('settings.selectLanguage')}</span>
+        <select class="bds-select" bind:value={locale} style="width: 140px;">
+          {#each availableLocaleCodes as code}
+            <option value={code}>{t(`language.${code}`)}</option>
+          {/each}
+        </select>
+      </div>
+    {/if}
+
+    <div class="bds-toggle-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
+      <div style="display: flex; gap: 8px; justify-content: space-between; align-items: center; width: 100%;">
+        <button 
+          type="button" 
+          class="bds-btn-outlined" 
+          style="flex: 1; font-size: 11px; padding: 6px 12px;" 
+          onclick={checkLanguageUpdates} 
+          disabled={updatingLanguages}
+        >
+          {updatingLanguages ? t('common.working') : t('settings.checkUpdates')}
+        </button>
+        <button 
+          type="button" 
+          class="bds-btn-outlined" 
+          style="flex: 1; font-size: 11px; padding: 6px 12px; border-color: rgba(239, 68, 68, 0.3); color: rgba(239, 68, 68, 0.8);" 
+          onclick={resetLanguageFactory}
+        >
+          {t('settings.resetFactory')}
+        </button>
+      </div>
+      {#if lastCheckedDate}
+        <span style="font-size: 10px; opacity: 0.5; text-align: center; display: block; margin-top: 2px;">
+          {t('settings.lastChecked').replace('{{date}}', lastCheckedDate)}
+        </span>
       {/if}
-
-      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
-        <div style="display: flex; gap: 8px; justify-content: space-between; align-items: center; width: 100%;">
-          <button 
-            type="button" 
-            class="bds-btn-outlined" 
-            style="flex: 1; font-size: 11px; padding: 6px 12px;" 
-            onclick={checkLanguageUpdates} 
-            disabled={updatingLanguages}
-          >
-            {updatingLanguages ? t('common.working') : t('settings.checkUpdates')}
-          </button>
-          <button 
-            type="button" 
-            class="bds-btn-outlined" 
-            style="flex: 1; font-size: 11px; padding: 6px 12px; border-color: rgba(239, 68, 68, 0.3); color: rgba(239, 68, 68, 0.8);" 
-            onclick={resetLanguageFactory}
-          >
-            {t('settings.resetFactory')}
-          </button>
-        </div>
-        {#if lastCheckedDate}
-          <span style="font-size: 10px; opacity: 0.5; text-align: center; display: block; margin-top: 4px;">
-            {t('settings.lastChecked').replace('{{date}}', lastCheckedDate)}
-          </span>
-        {/if}
-      </div>
     </div>
 
     <div class="bds-toggle-row">
