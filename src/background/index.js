@@ -402,34 +402,34 @@ async function fetchRemoteStatus() {
 // Run once on startup
 fetchRemoteStatus();
 
-// Dynamic Language updates from GitHub
+const localeMods = import.meta.glob("../locales/*.json", { eager: true });
+const localeCodes = Object.keys(localeMods)
+  .map(p => p.match(/(\w+)\.json$/)[1])
+  .filter(Boolean);
+
 async function handleLanguageUpdate() {
   try {
-    const enUrl = "https://raw.githubusercontent.com/EdgeTypE/better-deepseek/main/src/locales/en.json";
-    const trUrl = "https://raw.githubusercontent.com/EdgeTypE/better-deepseek/main/src/locales/tr.json";
-
-    const [enRes, trRes] = await Promise.all([
-      fetch(`${enUrl}?t=${Date.now()}`, { cache: "no-store" }),
-      fetch(`${trUrl}?t=${Date.now()}`, { cache: "no-store" })
-    ]);
-
-    if (!enRes.ok || !trRes.ok) {
-      return { success: false, error: `Failed to fetch: EN=${enRes.status}, TR=${trRes.status}` };
+    const BASE_URL = "https://raw.githubusercontent.com/EdgeTypE/better-deepseek/main/src/locales";
+    const results = await Promise.allSettled(
+      localeCodes.map(code =>
+        fetch(`${BASE_URL}/${code}.json?t=${Date.now()}`, { cache: "no-store" })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => data?.messages ? { [code]: data } : null)
+      )
+    );
+    const updates = {};
+    for (const result of results) {
+      if (result.status === "fulfilled" && result.value) {
+        Object.assign(updates, result.value);
+      }
     }
-
-    const enData = await enRes.json();
-    const trData = await trRes.json();
-
-    if (!enData || !trData || !enData.messages || !trData.messages) {
-      return { success: false, error: "Invalid dynamic language file format" };
+    if (Object.keys(updates).length === 0) {
+      return { success: false, error: "No valid locale files fetched" };
     }
-
     await chrome.storage.local.set({
-      bds_locale_update_en: enData,
-      bds_locale_update_tr: trData,
+      bds_locale_updates: updates,
       bds_locale_update_last_checked: new Date().toLocaleDateString()
     });
-
     return { success: true };
   } catch (err) {
     console.error("Failed to execute dynamic language update:", err);
@@ -440,8 +440,7 @@ async function handleLanguageUpdate() {
 async function handleLanguageReset() {
   try {
     await chrome.storage.local.remove([
-      "bds_locale_update_en",
-      "bds_locale_update_tr",
+      "bds_locale_updates",
       "bds_locale_update_last_checked"
     ]);
     return { success: true };

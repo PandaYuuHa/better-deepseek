@@ -1,14 +1,19 @@
-import en from "../locales/en.json";
-import tr from "../locales/tr.json";
-
-const locales = { en, tr };
+const localeModules = import.meta.glob("../locales/*.json", { eager: true });
+let locales = $state({});
+const availableLocaleCodes = [];
+for (const [path, mod] of Object.entries(localeModules)) {
+  const code = path.match(/(\w+)\.json$/)[1];
+  const data = mod.default || mod;
+  if (data && data.messages) {
+    locales[code] = data;
+    availableLocaleCodes.push(code);
+  }
+}
 
 class I18nManager {
-  // Svelte 5 reactive state for active locale
-  locale = $state("en");
+  locale = $state(availableLocaleCodes[0] || "en");
 
-  // Derived messages dictionary corresponding to the active locale
-  messages = $derived(locales[this.locale] || locales["en"]);
+  messages = $derived(locales[this.locale] || locales[availableLocaleCodes[0]]);
 
   /**
    * Initializes the locale from chrome.storage.local, cookies, or falls back to system preferences.
@@ -34,36 +39,33 @@ class I18nManager {
       }
     }
 
-    // 2. Try browser/system language if cookie language is not found or not supported
     if (!detectedLang || !locales[detectedLang]) {
-      detectedLang = (typeof navigator !== "undefined" ? navigator.language : "en").split("-")[0];
+      detectedLang = (typeof navigator !== "undefined" ? navigator.language : availableLocaleCodes[0] || "en").split("-")[0];
     }
 
-    // 3. Fallback to English if still not supported
     if (detectedLang && locales[detectedLang]) {
       this.locale = detectedLang;
     } else {
-      this.locale = "en";
+      this.locale = availableLocaleCodes[0] || "en";
     }
   }
 
   /**
    * Dynamically hot-loads updated locales fetched from remote source
-   * @param {Object} updatedEn Updated English dictionary
-   * @param {Object} updatedTr Updated Turkish dictionary
+   * @param {Object} updates Dictionary of locale code → updated locale data
    */
-  loadUpdatedLocales(updatedEn, updatedTr) {
-    if (updatedEn && updatedEn.messages) {
-      locales.en = updatedEn;
-    }
-    if (updatedTr && updatedTr.messages) {
-      locales.tr = updatedTr;
+  loadUpdatedLocales(updates) {
+    if (!updates || typeof updates !== "object") return;
+    for (const [code, data] of Object.entries(updates)) {
+      if (data && data.messages && locales[code]) {
+        locales[code] = data;
+      }
     }
   }
 
   /**
    * Updates the active locale, persisting it to chrome storage.
-   * @param {string} lang Language code ('en', 'tr', etc.)
+   * @param {string} lang Language code
    */
   setLocale(lang) {
     if (locales[lang]) {
@@ -89,12 +91,13 @@ class I18nManager {
   t(path, vars = {}) {
     const parts = path.split(".");
 
-    // 1. Resolve within active locale's dictionary
     let value = this.resolvePath(this.messages.messages, parts);
 
-    // 2. If missing, fall back to English dictionary
-    if (value === undefined && this.locale !== "en") {
-      value = this.resolvePath(locales["en"].messages, parts);
+    if (value === undefined && this.locale !== availableLocaleCodes[0]) {
+      const fallback = availableLocaleCodes[0] || "en";
+      if (locales[fallback]?.messages) {
+        value = this.resolvePath(locales[fallback].messages, parts);
+      }
     }
 
     // 3. If completely missing, return key path as a safety string
@@ -131,3 +134,4 @@ class I18nManager {
 
 export const i18n = new I18nManager();
 export const t = (path, vars) => i18n.t(path, vars);
+export { availableLocaleCodes };

@@ -9,7 +9,7 @@
     DEFAULT_SYSTEM_PROMPT,
   } from "../../lib/constants.js";
   import { getActiveProject, updateProject } from "../project-manager.js";
-  import { t, i18n } from "../../lib/i18n.svelte.js";
+  import { t, i18n, availableLocaleCodes } from "../../lib/i18n.svelte.js";
 
   let customSystemPrompts = $state(appState.settings.customSystemPrompts || []);
   let activeSystemPromptId = $state(appState.settings.activeSystemPromptId || "default");
@@ -51,7 +51,7 @@
   let projectRagEnabled = $state(Boolean(appState.settings.projectRagEnabled));
   let projectRagLimit = $state(Number(appState.settings.projectRagLimit) || 5);
   let processGitignoreOnUpload = $state(Boolean(appState.settings.processGitignoreOnUpload));
-  let locale = $state(appState.settings.locale || "en");
+  let locale = $state(appState.settings.locale || availableLocaleCodes[0] || "en");
   let syncLocale = $state(Boolean(appState.settings.syncLocale));
   let advancedOpen = $state(false);
   let lastCheckedDate = $state("");
@@ -92,7 +92,7 @@
     projectRagEnabled = Boolean(appState.settings.projectRagEnabled);
     projectRagLimit = Number(appState.settings.projectRagLimit) || 5;
     processGitignoreOnUpload = Boolean(appState.settings.processGitignoreOnUpload);
-    locale = appState.settings.locale || "en";
+    locale = appState.settings.locale || availableLocaleCodes[0] || "en";
     syncLocale = Boolean(appState.settings.syncLocale);
     chrome.storage.local.get("bds_locale_update_last_checked", (data) => {
       lastCheckedDate = data.bds_locale_update_last_checked || "";
@@ -458,8 +458,9 @@
         <div class="bds-toggle-row" style="padding: 0; border: none; margin: 0; justify-content: space-between; align-items: center;">
           <span class="bds-toggle-label">{t('settings.selectLanguage')}</span>
           <select class="bds-select" bind:value={locale} style="width: 140px;">
-            <option value="en">{t('language.en')}</option>
-            <option value="tr">{t('language.tr')}</option>
+            {#each availableLocaleCodes as code}
+              <option value={code}>{t(`language.${code}`)}</option>
+            {/each}
           </select>
         </div>
       {/if}
