@@ -159,8 +159,9 @@ export function processMessageNode(node) {
 
   const parsed = parseBdsMessage(rawText, shouldForceCloseTags);
 
-  // --- AUTO INTERFACES (fast trigger with stall guard) ---
-  // Uses 1200ms stall guard instead of waiting for full message settlement.
+  // --- AUTO INTERFACES (instant trigger on completion) ---
+  // Triggers immediately when the global stop button disappears,
+  // which signals that DeepSeek's SSE stream has fired "event: close".
   // Uses isLatestAssistantMessage instead of isAbsoluteLastMessage so a
   // user message after the AI reply doesn't silently block auto tags.
   const autoRequestsAvailable = parsed.autoRequests.webFetch.length > 0 ||
@@ -169,7 +170,11 @@ export function processMessageNode(node) {
     parsed.autoRequests.youtubeFetch.length > 0;
 
   if (isLatestAssistant && autoRequestsAvailable) {
-    if (timeSinceUpdate > 1200) {
+    // isSystemGenerating() checks for the stop button (square SVG icon).
+    // When it's gone, the SSE stream has ended and all tokens are in the DOM.
+    const isGenerationDone = !isSystemGenerating();
+
+    if (isGenerationDone) {
       if (!stateData.autoWebFetchesHandled) stateData.autoWebFetchesHandled = new Set();
       if (!stateData.autoGitHubFetchesHandled) stateData.autoGitHubFetchesHandled = new Set();
       if (!stateData.autoTwitterFetchesHandled) stateData.autoTwitterFetchesHandled = new Set();
@@ -206,7 +211,7 @@ export function processMessageNode(node) {
       stateData.autoTimer = setTimeout(() => {
         stateData.autoTimer = null;
         scheduleScan();
-      }, 1300);
+      }, 3000);
     }
   }
 
@@ -308,7 +313,7 @@ export function processMessageNode(node) {
       }
     }
 
-    if (timeSinceUpdate > 1200 && parsed.askQuestions.length > 0 && isLatestAssistantMessage(node)) {
+    if (!isSystemGenerating() && parsed.askQuestions.length > 0 && isLatestAssistantMessage(node)) {
       state.activeQuestions = parsed.askQuestions;
       window.dispatchEvent(new CustomEvent('bds-ask-questions', { 
         detail: { 
