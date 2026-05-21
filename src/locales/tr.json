@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-19",
+  "updatedAt": "2026-05-19T00:00:00Z",
   "messages": {
     "common": {
       "save": "Kaydet",
@@ -63,7 +63,7 @@
       "speechLanguage": "Konuşma Dili",
       "autoDownloadZip": "LONG_WORK zip dosyasını otomatik indir",
       "preferredLang": "Tercih Edilen Yanıt Dili",
-      "preferredLangPlaceholder": "Örn. Türkçe, İngilizce, Korsan Dili",
+      "preferredLangPlaceholder": "Örn. Türkçe, İngilizce, Göktürkçe...",
       "preferredLangHint": "Modelin kendi karar vermesi için boş bırakın.",
       "markdownMaxDepth": "Markdown Tarayıcı Maks. Derinliği",
       "markdownMaxDepthHint": "Mesajlardan markdown oluştururken DOM yineleme derinliği üst sınırı. Düşük = derin iç içe geçmiş içeriklerde yığın taşmasına (stack overflow) karşı korur; Yüksek = yapısal bütünlüğü korur. Varsayılan 200.",
@@ -230,11 +230,11 @@
       "other": "Diğer",
       "noOptionSkipped": "*(Seçenek seçilmedi / Geçildi)*",
       "noAnswerSkipped": "*(Yanıt verilmedi / Geçildi)*",
-      "answersHeader": "İşte açıklığa kavuşturma sorularına verdiğim yanıtlar:\n\n",
+      "answersHeader": "İşte sorularına verdiğim yanıtlar:\n\n",
       "noInputField": "DeepSeek giriş alanı bulunamadı."
     },
     "statusBanner": {
-      "title": "DeepSeek {{indicator}} sorunu tespit edildi | {{description}}",
+      "title": "DeepSeek {{indicator}} sorun tespit edildi | {{description}}",
       "message": "Sorun sizden kaynaklı değil, DeepSeek sunucularından kaynaklanmaktadır. Sunucular yüksek yük veya bakım nedeniyle sorun yaşıyor olabilir."
     },
     "announcementBanner": {
@@ -261,7 +261,7 @@
       "projectLabel": "Proje",
       "noProject": "Hiçbiri",
       "projectHint": "Seçilen projenin talimatları yalnızca ilk mesajda geçerli olur.",
-      "deselectAll": "Tümünü bırak",
+      "deselectAll": "Tüm seçimi kaldır",
       "selectAll": "Tümünü seç",
       "file": "dosya",
       "files": "dosya",
@@ -296,7 +296,7 @@
       "consoleOutput": "Konsol Çıktısı",
       "clear": "Temizle",
       "noOutput": "(Kod çıktı vermeden başarıyla tamamlandı)",
-      "loadingPyodide": "Pyodide Çalışma Zamanı Yükleniyor...",
+      "loadingPyodide": "Pyodide Çalışma Ortamı Yükleniyor...",
       "finished": "Tamamlandı.",
       "executionError": "Çalıştırma Hatası.",
       "pythonStatus": "Python 3.x (WASM)",
@@ -341,7 +341,7 @@
       "working": "Çalışıyor...",
       "showScript": "Oluşturulan betiği göster",
       "hideScript": "Oluşturulan betiği gizle",
-      "preparing": "Sanal alan hazırlanıyor...",
+      "preparing": "Sanal ortam hazırlanıyor...",
       "downloading": "İndiriliyor...",
       "success": "Başarılı!",
       "error": "Hata: {{msg}}",
@@ -356,7 +356,7 @@
       "working": "Çalışıyor...",
       "showScript": "Oluşturulan betiği göster",
       "hideScript": "Oluşturulan betiği gizle",
-      "preparing": "Sanal alan hazırlanıyor...",
+      "preparing": "Sanal ortam hazırlanıyor...",
       "downloading": "İndiriliyor...",
       "success": "Başarılı!",
       "error": "Hata: {{msg}}",
@@ -371,7 +371,7 @@
       "working": "Çalışıyor...",
       "showScript": "Oluşturulan betiği göster",
       "hideScript": "Oluşturulan betiği gizle",
-      "preparing": "Sanal alan hazırlanıyor...",
+      "preparing": "Sanal ortam hazırlanıyor...",
       "downloading": "İndiriliyor...",
       "success": "Başarılı!",
       "error": "Hata: {{msg}}",
@@ -417,7 +417,7 @@
       "showLess": "Daha Az Göster"
     },
     "messageOverlay": {
-      "questionsAsked": "Açıklık getirilmesi gereken sorular soruldu.",
+      "questionsAsked": "Bağlamı anlamak için sorular soruldu.",
       "questionsSubtitle": "Lütfen yanıtlarınızı aşağıdaki etkileşim panelinden girin.",
       "characterCreated": "Karakter/Persona oluşturuldu.",
       "characterActive": "Aktif karakter: <strong>{{name}}</strong>",
