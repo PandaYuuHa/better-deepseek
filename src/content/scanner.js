@@ -5,7 +5,6 @@
 import state, { withObserverPaused } from "./state.js";
 import { LONG_WORK_STALE_MS } from "../lib/constants.js";
 import { processMessageNode } from "./message-processor.svelte.js";
-import { enhanceCodeBlockDownloads } from "./files/code-blocks.js";
 import { mount } from "svelte";
 import AttachMenu from "./ui/AttachMenu.svelte";
 import ExpandToggle from "./ui/ExpandToggle.svelte";
@@ -138,8 +137,6 @@ export function scheduleScan() {
  */
 function scanPage() {
   withObserverPaused(() => {
-    enhanceCodeBlockDownloads();
-
     if (
       state.longWork.active &&
       Date.now() - state.longWork.lastActivityAt > LONG_WORK_STALE_MS

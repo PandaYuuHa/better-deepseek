@@ -22,7 +22,6 @@ export function resetAppState(overrides = {}) {
   state.lastUrl =
     typeof location !== "undefined" ? location.href : "https://chat.deepseek.com/";
   state.processedStandaloneFiles = new Set();
-  state.downloadCounter = 0;
   state.network = {
     activeCompletionRequests: 0,
     lastEventAt: 0,

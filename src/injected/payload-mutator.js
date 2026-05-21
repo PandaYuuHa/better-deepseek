@@ -438,10 +438,10 @@ export function buildMemoryCallsBlock(userPrompt, state) {
     return "";
   }
 
-  const text = selected
-    .map((item) => `${item.key}: ${item.value}`)
-    .join(". ");
-  return `<BetterDeepSeek> <BDS:memory_calls>${text}</BDS:memory_calls> </BetterDeepSeek>`;
+  const blocks = selected
+    .map((item) => `<BDS:memory_calls importance="${item.importance}">${item.key}: ${item.value}</BDS:memory_calls>`)
+    .join("\n");
+  return `<BetterDeepSeek>\n${blocks}\n</BetterDeepSeek>`;
 }
 
 /**
@@ -563,7 +563,7 @@ export function stripInjectedBlocks(text) {
   output = output.replace(
     /<BetterDeepSeek>([\s\S]*?)<\/BetterDeepSeek>/gi,
     (match, content) => {
-      if (content.includes("[BDS:AUTO]") || content.includes("<BDS:memory_calls>")) {
+      if (content.includes("[BDS:AUTO]") || /<BDS:memory_calls[\s>]/i.test(content)) {
         return match;
       }
       return "";
@@ -572,7 +572,7 @@ export function stripInjectedBlocks(text) {
 
   output = output.replace(/<BDS:SKILLS>[\s\S]*?<\/BDS:SKILLS>/gi, "");
   output = output.replace(
-    /<BDS:memory_calls>[\s\S]*?<\/BDS:memory_calls>/gi,
+    /<BDS:memory_calls[^>]*>[\s\S]*?<\/BDS:memory_calls>/gi,
     ""
   );
   output = output.replace(/<BDS:RP>[\s\S]*?<\/BDS:RP>/gi, "");

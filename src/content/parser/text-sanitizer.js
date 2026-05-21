@@ -10,7 +10,7 @@ export function sanitizeVisibleText(text) {
   );
   output = output.replace(/<BDS:SKILLS>[\s\S]*?<\/BDS:SKILLS>/gi, "");
   output = output.replace(
-    /<BDS:memory_calls>[\s\S]*?<\/BDS:memory_calls>/gi,
+    /<BDS:memory_calls[^>]*>[\s\S]*?<\/BDS:memory_calls>/gi,
     ""
   );
   output = output.replace(
