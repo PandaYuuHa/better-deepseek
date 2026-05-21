@@ -136,3 +136,30 @@ export function getConfig(path) {
 }
 
 export const REMOTE_CONFIG_EVENT = EVENT_CONFIG_UPDATED;
+
+export function detectModelType() {
+  const switcherSel = getConfig("selectors.modelSwitcher");
+  if (switcherSel) {
+    const switcher = document.querySelector(switcherSel);
+    if (switcher) {
+      const checked = switcher.querySelector('[aria-checked="true"]');
+      if (checked) {
+        const dt = checked.getAttribute("data-model-type");
+        if (dt === "expert") return "expert";
+        if (dt === "deepthink") return "deepthink";
+        return "instant";
+      }
+    }
+  }
+  const badgeSel = getConfig("selectors.modelBadge");
+  if (badgeSel) {
+    const el = document.querySelector(badgeSel);
+    if (el) {
+      const text = (el.textContent || "").toLowerCase().trim();
+      if (text === "expert" || text === "deepseek-reasoner") return "expert";
+      if (text === "instant" || text === "deepseek-chat") return "instant";
+      if (text.includes("deepthink") || text.includes("deep think")) return "deepthink";
+    }
+  }
+  return "instant";
+}

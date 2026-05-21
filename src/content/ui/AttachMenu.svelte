@@ -27,7 +27,7 @@
   import appState from "../state.js";
   import { BRIDGE_EVENTS } from "../../lib/constants.js";
   import { t } from "../../lib/i18n.svelte.js";
-  import { getFlag, getConfig, REMOTE_CONFIG_EVENT } from "../../lib/remote-config.svelte.js";
+  import { getFlag, getConfig, REMOTE_CONFIG_EVENT, detectModelType } from "../../lib/remote-config.svelte.js";
 
   // The native input[type="file"] reference passed from scanner
   let { nativeInput } = $props();
@@ -88,36 +88,14 @@
 
   let currentModelType = $state("instant");
 
-  function detectModelType() {
-    const switcherSel = getConfig("selectors.modelSwitcher");
-    if (switcherSel) {
-      const switcher = document.querySelector(switcherSel);
-      if (switcher) {
-        const checked = switcher.querySelector('[aria-checked="true"]');
-        if (checked) {
-          const dt = checked.getAttribute("data-model-type");
-          if (dt === "expert") return "expert";
-          if (dt === "deepthink") return "deepthink";
-          return "instant";
-        }
-      }
-    }
-    const modelBadgeSelector = getConfig("selectors.modelBadge");
-    if (modelBadgeSelector) {
-      const el = document.querySelector(modelBadgeSelector);
-      if (el) {
-        const text = (el.textContent || "").toLowerCase().trim();
-        if (text === "expert" || text === "deepseek-reasoner") return "expert";
-        if (text === "instant" || text === "deepseek-chat") return "instant";
-        if (text.includes("deepthink") || text.includes("deep think")) return "deepthink";
-      }
-    }
+  function detectModelTypeWithPricing() {
+    const model = detectModelType();
+    if (model !== "instant") return model;
     const modelName = appState.pricing?.modelName || "";
     const lo = modelName.toLowerCase();
     if (lo.includes("pro") || lo.includes("reasoner") || lo === "expert") return "expert";
-    if (lo.includes("flash") || lo.includes("chat") || lo === "instant") return "instant";
     if (lo.includes("deepthink")) return "deepthink";
-    return "instant";
+    return model;
   }
 
   let shouldShowAttach = $state(true);
@@ -142,7 +120,7 @@
 
   function recheckModelType() {
     const prev = currentModelType;
-    currentModelType = detectModelType();
+    currentModelType = detectModelTypeWithPricing();
     if (currentModelType !== prev) updateVisibility();
   }
 
@@ -342,7 +320,7 @@
     document.addEventListener("keydown", handleEscape);
     appState.heroBarRef = { refresh: refreshProjectPanel };
 
-    currentModelType = detectModelType();
+    currentModelType = detectModelTypeWithPricing();
     updateVisibility();
     startModelWatcher();
 

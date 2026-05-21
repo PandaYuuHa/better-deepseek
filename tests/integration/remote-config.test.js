@@ -6,6 +6,7 @@ import {
   getFlag,
   getConfig,
   REMOTE_CONFIG_EVENT,
+  detectModelType,
 } from "../../src/lib/remote-config.svelte.js";
 import { DEFAULT_REMOTE_CONFIG, STORAGE_KEYS } from "../../src/lib/constants.js";
 import { setChromeStorage, chromeMockState, chromeMock } from "../mocks/chrome.js";
@@ -394,20 +395,6 @@ describe("AttachMenu config integration (DOM model switching)", () => {
   afterEach(() => {
     radioGroup?.remove();
   });
-
-  function detectModelType() {
-    const switcher = document.querySelector('[role="radiogroup"]');
-    if (switcher) {
-      const checked = switcher.querySelector('[aria-checked="true"]');
-      if (checked) {
-        const dt = checked.getAttribute("data-model-type");
-        if (dt === "expert") return "expert";
-        if (dt === "deepthink") return "deepthink";
-        return "instant";
-      }
-    }
-    return "instant";
-  }
 
   function getModelKey(modelType) {
     return modelType === "expert" ? "expertMode" : modelType === "instant" ? "instantMode" : "deepthinkMode";
