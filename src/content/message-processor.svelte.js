@@ -7,7 +7,6 @@ import { simpleHash } from "../lib/utils/hash.js";
 import {
   detectMessageRole,
   isLatestAssistantMessage,
-  isAbsoluteLastMessage,
   scheduleScan,
   collectMessageNodes
 } from "./scanner.js";
@@ -160,6 +159,57 @@ export function processMessageNode(node) {
 
   const parsed = parseBdsMessage(rawText, shouldForceCloseTags);
 
+  // --- AUTO INTERFACES (fast trigger with stall guard) ---
+  // Uses 1200ms stall guard instead of waiting for full message settlement.
+  // Uses isLatestAssistantMessage instead of isAbsoluteLastMessage so a
+  // user message after the AI reply doesn't silently block auto tags.
+  const autoRequestsAvailable = parsed.autoRequests.webFetch.length > 0 ||
+    parsed.autoRequests.githubFetch.length > 0 ||
+    parsed.autoRequests.twitterFetch.length > 0 ||
+    parsed.autoRequests.youtubeFetch.length > 0;
+
+  if (isLatestAssistant && autoRequestsAvailable) {
+    if (timeSinceUpdate > 1200) {
+      if (!stateData.autoWebFetchesHandled) stateData.autoWebFetchesHandled = new Set();
+      if (!stateData.autoGitHubFetchesHandled) stateData.autoGitHubFetchesHandled = new Set();
+      if (!stateData.autoTwitterFetchesHandled) stateData.autoTwitterFetchesHandled = new Set();
+      if (!stateData.autoYouTubeFetchesHandled) stateData.autoYouTubeFetchesHandled = new Set();
+
+      for (const url of parsed.autoRequests.webFetch) {
+        if (!stateData.autoWebFetchesHandled.has(url)) {
+          stateData.autoWebFetchesHandled.add(url);
+          handleAutoWebFetch(url);
+        }
+      }
+
+      for (const repoUrl of parsed.autoRequests.githubFetch) {
+        if (!stateData.autoGitHubFetchesHandled.has(repoUrl)) {
+          stateData.autoGitHubFetchesHandled.add(repoUrl);
+          handleAutoGitHubFetch(repoUrl);
+        }
+      }
+
+      for (const tweetUrl of parsed.autoRequests.twitterFetch) {
+        if (!stateData.autoTwitterFetchesHandled.has(tweetUrl)) {
+          stateData.autoTwitterFetchesHandled.add(tweetUrl);
+          handleAutoTwitterFetch(tweetUrl);
+        }
+      }
+
+      for (const videoUrl of parsed.autoRequests.youtubeFetch) {
+        if (!stateData.autoYouTubeFetchesHandled.has(videoUrl)) {
+          stateData.autoYouTubeFetchesHandled.add(videoUrl);
+          handleAutoYouTubeFetch(videoUrl);
+        }
+      }
+    } else if (!stateData.autoTimer) {
+      stateData.autoTimer = setTimeout(() => {
+        stateData.autoTimer = null;
+        scheduleScan();
+      }, 1300);
+    }
+  }
+
   // If we are still streaming a tool but aren't stalled yet, schedule a check in case it gets cut off
   if (!isStalled && parsed.isStreamingTool) {
     if (stateData.stallTimer) clearTimeout(stateData.stallTimer);
@@ -255,48 +305,6 @@ export function processMessageNode(node) {
           // to handle any DOM re-renders until the next LONG_WORK starts.
         }
         stateData.filesEmitted = true;
-      }
-    }
-
-    // --- AUTO INTERFACES ---
-    // Only trigger auto-requests if this is the absolute latest message in the entire chat.
-    // This prevents redundant historical triggers on page refresh.
-    if (isSettled && (parsed.autoRequests.webFetch.length > 0 || 
-                      parsed.autoRequests.githubFetch.length > 0 || 
-                      parsed.autoRequests.twitterFetch.length > 0 || 
-                      parsed.autoRequests.youtubeFetch.length > 0) && isAbsoluteLastMessage(node)) {
-      
-      if (!stateData.autoWebFetchesHandled) stateData.autoWebFetchesHandled = new Set();
-      if (!stateData.autoGitHubFetchesHandled) stateData.autoGitHubFetchesHandled = new Set();
-      if (!stateData.autoTwitterFetchesHandled) stateData.autoTwitterFetchesHandled = new Set();
-      if (!stateData.autoYouTubeFetchesHandled) stateData.autoYouTubeFetchesHandled = new Set();
-
-      for (const url of parsed.autoRequests.webFetch) {
-        if (!stateData.autoWebFetchesHandled.has(url)) {
-          stateData.autoWebFetchesHandled.add(url);
-          handleAutoWebFetch(url);
-        }
-      }
-
-      for (const repoUrl of parsed.autoRequests.githubFetch) {
-        if (!stateData.autoGitHubFetchesHandled.has(repoUrl)) {
-          stateData.autoGitHubFetchesHandled.add(repoUrl);
-          handleAutoGitHubFetch(repoUrl);
-        }
-      }
-
-      for (const tweetUrl of parsed.autoRequests.twitterFetch) {
-        if (!stateData.autoTwitterFetchesHandled.has(tweetUrl)) {
-          stateData.autoTwitterFetchesHandled.add(tweetUrl);
-          handleAutoTwitterFetch(tweetUrl);
-        }
-      }
-
-      for (const videoUrl of parsed.autoRequests.youtubeFetch) {
-        if (!stateData.autoYouTubeFetchesHandled.has(videoUrl)) {
-          stateData.autoYouTubeFetchesHandled.add(videoUrl);
-          handleAutoYouTubeFetch(videoUrl);
-        }
       }
     }
 
