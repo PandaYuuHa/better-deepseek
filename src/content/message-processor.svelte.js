@@ -24,6 +24,8 @@ import { handleAutoWebFetch, handleAutoGitHubFetch, handleAutoTwitterFetch, hand
 import { mount, unmount } from "svelte";
 import MessageOverlay from "./ui/MessageOverlay.svelte";
 import { i18n } from "../lib/i18n.svelte.js";
+import { makeId } from "../lib/utils/helpers.js";
+import { STORAGE_KEYS } from "../lib/constants.js";
 
 const messageOverlays = new Map();
 const nodeStates = new WeakMap();
@@ -51,6 +53,7 @@ export function processMessageNode(node) {
   injectPythonRunButtons(node);
   injectJavaScriptRunButtons(node);
   injectSelectionCheckbox(node);
+  injectBookmarkButton(node);
 
   const rawText = extractMessageRawText(node);
   if (!rawText.trim()) {
@@ -825,6 +828,107 @@ function injectSelectionCheckbox(node) {
   } else {
     node.appendChild(container);
   }
+}
+
+function injectBookmarkButton(node) {
+  const stateData = getNodeState(node);
+  if (stateData.bookmarkInjected) return;
+
+  const role = detectMessageRole(node);
+  if (role !== "user" && role !== "assistant") return;
+
+  let msgId = node.getAttribute("data-bds-msg-id");
+  if (!msgId) {
+    msgId = "msg-" + Math.random().toString(36).substring(2, 11);
+    node.setAttribute("data-bds-msg-id", msgId);
+  }
+
+  const isBookmarked = state.savedItems.some(item => item.messageNodeId === msgId && item.type === "bookmark");
+
+  let container;
+  if (role === "user") {
+    const wrapper = node.parentElement || node;
+    container = wrapper.querySelector("._11d6b3a .ds-flex") ||
+      wrapper.querySelector(".ds-flex._78e0558") || wrapper.querySelector("[class*='_78e0558']");
+  } else {
+    const wrapper = node.closest("._4f9bf79._43c05b5") || node.parentElement || node;
+    const actionRow = wrapper.querySelector("._0a3d93b") || wrapper.querySelector(".ds-flex._0a3d93b");
+    if (actionRow) {
+      container = actionRow.querySelector("._965abe9") || actionRow.querySelector(".ds-flex._965abe9._54866f7");
+    }
+  }
+
+  if (!container) return;
+
+  const siblingBtn = container.querySelector('[class*="ds-icon-button"]');
+  const baseClass = siblingBtn ? siblingBtn.className.replace(/bds-bookmark-btn[^\s]*/g, "").trim() : "ds-icon-button ds-icon-button--m ds-icon-button--sizing-container";
+
+  const btn = document.createElement("div");
+  btn.className = baseClass + " bds-bookmark-btn" + (isBookmarked ? " bds-bookmark-btn--active" : "");
+  btn.setAttribute("tabindex", "0");
+  btn.setAttribute("role", "button");
+  btn.setAttribute("aria-disabled", "false");
+
+  btn.innerHTML = [
+    '<div class="ds-icon-button__hover-bg"></div>',
+    '<div class="ds-icon">',
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="' + (isBookmarked ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">',
+    '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>',
+    '</svg>',
+    '</div>',
+    '<div class="ds-focus-ring"></div>'
+  ].join("");
+
+  btn.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    const already = state.savedItems.some(item => item.messageNodeId === msgId && item.type === "bookmark");
+
+    if (already) {
+      state.savedItems = state.savedItems.filter(item => !(item.messageNodeId === msgId && item.type === "bookmark"));
+      await chrome.storage.local.set({ [STORAGE_KEYS.savedItems]: state.savedItems });
+      btn.classList.remove("bds-bookmark-btn--active");
+      const svg = btn.querySelector("svg");
+      if (svg) svg.setAttribute("fill", "none");
+      if (state.ui) state.ui.showToast("Bookmark removed");
+    } else {
+      const conversationUrl = location.href;
+      const match = location.href.match(/\/chat\/s\/([^\/]+)/);
+      const conversationId = match ? match[1] : "";
+      let conversationTitle = "";
+      if (conversationId) {
+        const session = state.chatSessions.find(s => s.id === conversationId);
+        if (session && session.title) conversationTitle = session.title;
+      }
+      if (!conversationTitle) {
+        const t = document.title.replace(/\s*[-·]\s*DeepSeek\s*$/i, "").trim();
+        if (t && t.toLowerCase() !== "chat") conversationTitle = t;
+      }
+
+      const text = extractMessageRawText(node).slice(0, 2000);
+      const snippet = text.length > 200 ? text.slice(0, 200) + "..." : text;
+
+      state.savedItems.push({
+        id: makeId(),
+        type: "bookmark",
+        title: snippet,
+        content: text,
+        messageType: role,
+        messageNodeId: msgId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        conversationTitle: conversationTitle,
+        conversationUrl: conversationUrl,
+      });
+      await chrome.storage.local.set({ [STORAGE_KEYS.savedItems]: state.savedItems });
+      btn.classList.add("bds-bookmark-btn--active");
+      const svg = btn.querySelector("svg");
+      if (svg) svg.setAttribute("fill", "currentColor");
+      if (state.ui) state.ui.showToast("Message bookmarked");
+    }
+  });
+
+  container.appendChild(btn);
+  stateData.bookmarkInjected = true;
 }
 
 function handleUserMessageCollapse(node) {

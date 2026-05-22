@@ -65,6 +65,7 @@ const state = {
   whatsNewPending: false,
   /** @type {Object<string, string[]>} session ID -> tag names */
   chatTags: {},
+  savedItems: [],
   /** @type {{indicator: 'none'|'minor'|'major'|'critical', description: string, lastChecked: number}} */
   serverStatus: {
     indicator: 'none',

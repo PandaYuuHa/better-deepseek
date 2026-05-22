@@ -29,6 +29,7 @@ export async function loadStateFromStorage() {
     STORAGE_KEYS.projectFiles,
     STORAGE_KEYS.whatsNewPending,
     STORAGE_KEYS.chatTags,
+    STORAGE_KEYS.savedItems,
     STORAGE_KEYS.remoteAnnouncement,
     STORAGE_KEYS.dismissedAnnouncements,
     "bds_locale_updates",
@@ -106,6 +107,7 @@ export async function loadStateFromStorage() {
   state.projectFiles = normalizeProjectFiles(values[STORAGE_KEYS.projectFiles]);
   state.whatsNewPending = !!values[STORAGE_KEYS.whatsNewPending];
   state.chatTags = normalizeChatTags(values[STORAGE_KEYS.chatTags]);
+  state.savedItems = normalizeSavedItems(values[STORAGE_KEYS.savedItems]);
   state.remoteAnnouncements = Array.isArray(values[STORAGE_KEYS.remoteAnnouncement]) ? values[STORAGE_KEYS.remoteAnnouncement] : [];
   state.dismissedAnnouncements = Array.isArray(values[STORAGE_KEYS.dismissedAnnouncements]) ? values[STORAGE_KEYS.dismissedAnnouncements] : [];
 
@@ -308,6 +310,26 @@ export function normalizeChatTags(raw) {
   return result;
 }
 
+export function normalizeSavedItems(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item) => item && item.id && item.content)
+    .map((item) => ({
+      id: String(item.id),
+      type: item.type === "snippet" ? "snippet" : "bookmark",
+      title: String(item.title || ""),
+      content: String(item.content),
+      messageType: item.type === "bookmark"
+        ? (item.messageType === "assistant" ? "assistant" : "user")
+        : null,
+      messageNodeId: String(item.messageNodeId || ""),
+      createdAt: Number(item.createdAt) || Date.now(),
+      updatedAt: Number(item.updatedAt) || Date.now(),
+      conversationTitle: String(item.conversationTitle || ""),
+      conversationUrl: String(item.conversationUrl || ""),
+    }));
+}
+
 // ── Storage change listener ──
 
 export function bindStorageChangeListener() {
@@ -389,6 +411,11 @@ export function bindStorageChangeListener() {
       });
     }
     
+    if (changes[STORAGE_KEYS.savedItems]) {
+      state.savedItems = normalizeSavedItems(changes[STORAGE_KEYS.savedItems].newValue);
+      if (state.ui) state.ui.refreshSavedItems();
+    }
+
     if (changes[STORAGE_KEYS.remoteAnnouncement]) {
       state.remoteAnnouncements = Array.isArray(changes[STORAGE_KEYS.remoteAnnouncement].newValue) ? changes[STORAGE_KEYS.remoteAnnouncement].newValue : [];
       window.dispatchEvent(new CustomEvent("bds:remote-announcement-updated", { detail: state.remoteAnnouncements }));

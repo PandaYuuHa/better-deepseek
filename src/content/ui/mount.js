@@ -46,6 +46,7 @@ export function mountUi() {
     refreshMemories: () => app.refreshMemories(),
     refreshProjects: () => app.refreshProjects(),
     refreshWhatsNew: () => app.refreshWhatsNew(),
+    refreshSavedItems: () => app.refreshSavedItems(),
   };
 
   state.ui = api;

@@ -47,6 +47,9 @@
     if (drawerRef) drawerRef.refreshProjects();
     if (appState.heroBarRef) appState.heroBarRef.refresh();
   }
+  export function refreshSavedItems() {
+    if (drawerRef) drawerRef.refreshSavedItems();
+  }
 
   export function refreshWhatsNew() {
     whatsNewPending = appState.whatsNewPending;

@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
   chatTags: "bds_chat_tags",
   remoteAnnouncement: "bds_remote_announcement",
   dismissedAnnouncements: "bds_dismissed_announcements",
+  savedItems: "bds_saved_items",
   remoteConfig: "bds_remote_config",
   remoteConfigMeta: "bds_remote_config_meta",
   // Last observed DeepSeek page theme. Written on all platforms so desktop modals and Android

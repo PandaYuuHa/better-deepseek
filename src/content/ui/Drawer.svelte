@@ -5,6 +5,7 @@
   import MemoryList from "./MemoryList.svelte";
   import ProjectsManager from "./ProjectsManager.svelte";
   import ProjectsCard from "./ProjectsCard.svelte";
+  import SavedItems from "./SavedItems.svelte";
   import appState from "../state.js";
   import { t } from "../../lib/i18n.svelte.js";
 
@@ -15,6 +16,7 @@
   let skillsRef = $state(null);
   let memoryRef = $state(null);
   let projectsManagerRef = $state(null);
+  let savedItemsRef = $state(null);
 
   let showProjectsManager = $state(false);
 
@@ -34,6 +36,9 @@
   export function refreshProjects() {
     if (projectsManagerRef) projectsManagerRef.refresh();
     if (settingsRef) settingsRef.refreshProject();
+  }
+  export function refreshSavedItems() {
+    if (savedItemsRef) savedItemsRef.refresh();
   }
 
   function openProjectsManager() {
@@ -88,7 +93,9 @@
     
     <ProjectsCard onmanage={openProjectsManager} />
 
-   
+    <hr />
+
+    <SavedItems bind:this={savedItemsRef} />
 
     <div class="bds-drawer-footer">
       <a href="https://github.com/EdgeTypE/better-deepseek" target="_blank" rel="noopener noreferrer" class="bds-github-link">

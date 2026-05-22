@@ -169,7 +169,7 @@ export async function handleAutoErrorReport(toolName, error, originalCode) {
   injectPureTextAndSend(autoMessage);
 }
 
-function injectPureTextAndSend(autoMessage) {
+export function injectPureTextAndSend(autoMessage) {
   // We reuse the logic from injectFileAndSend but skip the file part
   const editor = document.querySelector('#chat-input, textarea[placeholder], div[contenteditable="true"]');
   if (editor) {
