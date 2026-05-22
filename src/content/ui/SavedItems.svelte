@@ -37,9 +37,9 @@
     const d = new Date(ts);
     const now = new Date();
     const diff = now - d;
-    if (diff < 60000) return "just now";
-    if (diff < 3600000) return Math.floor(diff / 60000) + "m ago";
-    if (diff < 86400000) return Math.floor(diff / 3600000) + "h ago";
+    if (diff < 60000) return t('savedItems.dateJustNow');
+    if (diff < 3600000) return t('savedItems.dateMinAgo', { count: Math.floor(diff / 60000) });
+    if (diff < 86400000) return t('savedItems.dateHourAgo', { count: Math.floor(diff / 3600000) });
     return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }
 
@@ -47,7 +47,7 @@
     appState.savedItems = appState.savedItems.filter(i => i.id !== id);
     await chrome.storage.local.set({ [STORAGE_KEYS.savedItems]: appState.savedItems });
     items = [...appState.savedItems];
-    if (appState.ui) appState.ui.showToast("Deleted");
+    if (appState.ui) appState.ui.showToast(t('savedItems.deleted'));
   }
 
   function editItem(item) {
@@ -90,7 +90,7 @@
 
   function sendSnippet(content) {
     injectPureTextAndSend(content);
-    if (appState.ui) appState.ui.showToast("Snippet sent");
+    if (appState.ui) appState.ui.showToast(t('savedItems.snippetSent'));
   }
 
   function goToConversation(url) {
@@ -129,10 +129,10 @@
           appState.savedItems = merged;
           await chrome.storage.local.set({ [STORAGE_KEYS.savedItems]: appState.savedItems });
           items = [...appState.savedItems];
-          if (appState.ui) appState.ui.showToast("Imported " + data.length + " items");
+          if (appState.ui) appState.ui.showToast(t('savedItems.importSuccess', { count: data.length }));
         }
       } catch (err) {
-        if (appState.ui) appState.ui.showToast("Import failed: " + err.message);
+        if (appState.ui) appState.ui.showToast(t('savedItems.importFailed', { msg: err.message }));
       }
     };
     input.click();

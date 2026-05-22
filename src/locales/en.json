@@ -455,14 +455,16 @@
       "importFailed": "Import failed: {{msg}}",
       "namePlaceholder": "Snippet name",
       "contentPlaceholder": "Paste your prompt or message here...",
-      "nameRequired": "Title is required.",
       "contentRequired": "Content is required.",
       "save": "Save",
       "cancel": "Cancel",
       "titleRequired": "Title is required.",
       "export": "Export",
       "import": "Import",
-      "openConversation": "Open conversation"
+      "openConversation": "Open conversation",
+      "dateJustNow": "just now",
+      "dateMinAgo": "{{count}}m ago",
+      "dateHourAgo": "{{count}}h ago"
     },
     "sidebarSearch": {
       "placeholder": "Search history... (#tag)"

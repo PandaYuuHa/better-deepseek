@@ -868,6 +868,7 @@ function injectBookmarkButton(node) {
   btn.setAttribute("tabindex", "0");
   btn.setAttribute("role", "button");
   btn.setAttribute("aria-disabled", "false");
+  btn.title = isBookmarked ? i18n.t('savedItems.removeBookmark') : i18n.t('savedItems.bookmarkThis');
 
   btn.innerHTML = [
     '<div class="ds-icon-button__hover-bg"></div>',
@@ -889,7 +890,8 @@ function injectBookmarkButton(node) {
       btn.classList.remove("bds-bookmark-btn--active");
       const svg = btn.querySelector("svg");
       if (svg) svg.setAttribute("fill", "none");
-      if (state.ui) state.ui.showToast("Bookmark removed");
+      btn.title = i18n.t('savedItems.bookmarkThis');
+      if (state.ui) state.ui.showToast(i18n.t('savedItems.bookmarkRemoved'));
     } else {
       const conversationUrl = location.href;
       const match = location.href.match(/\/chat\/s\/([^\/]+)/);
@@ -923,7 +925,8 @@ function injectBookmarkButton(node) {
       btn.classList.add("bds-bookmark-btn--active");
       const svg = btn.querySelector("svg");
       if (svg) svg.setAttribute("fill", "currentColor");
-      if (state.ui) state.ui.showToast("Message bookmarked");
+      btn.title = i18n.t('savedItems.removeBookmark');
+      if (state.ui) state.ui.showToast(i18n.t('savedItems.bookmarked'));
     }
   });
 
