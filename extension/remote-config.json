@@ -7,7 +7,7 @@
   "features": {
     "attachMenu": {
       "enabled": true,
-      "expertMode": { "show": false, "showGithub": true, "showWeb": true, "showFolder": false },
+      "expertMode": { "show": true, "showGithub": false, "showWeb": false, "showFolder": false },
       "instantMode": { "show": true, "showGithub": true, "showWeb": true, "showFolder": true },
       "deepthinkMode": { "show": true, "showGithub": true, "showWeb": true, "showFolder": true }
     },
