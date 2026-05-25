@@ -175,7 +175,7 @@ describe("message processor integration", () => {
 
     expect(mocks.emitStandaloneFiles).toHaveBeenCalledWith(
       node,
-      [{ fileName: "README.md", content: "# Demo" }],
+      [{ fileName: "README.md", content: "# Demo\n" }],
     );
   });
 

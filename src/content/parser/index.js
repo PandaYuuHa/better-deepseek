@@ -83,18 +83,44 @@ export function parseBdsMessage(rawText, isSettled = false) {
   result.longWorkOpen = /<BDS:LONG_WORK>/i.test(text);
   result.longWorkClose = /<\/BDS:LONG_WORK>/i.test(text);
 
-  // Parse create_file pair tags independently so nested files inside LONG_WORK are captured.
-  const createFilePairRegex =
-    /<BDS:create_file([^>]*)>([\s\S]*?)<\/BDS:create_file>/gi;
-  let match;
-  while ((match = createFilePairRegex.exec(text)) !== null) {
-    const attrs = parseTagAttributes(match[1] || "");
-    const fileName = attrs.fileName || attrs.filename || attrs.path;
-    if (!fileName) {
-      continue;
+  // Parse create_file pair tags using position-based matching.
+  // This correctly handles content that literally contains </BDS:create_file>
+  // by pairing each opening with the last closing before the next opening.
+  // Also requires whitespace between tag name and attributes.
+  const openCreateRegex = /<BDS:create_file\s+([^>]*)>/gi;
+  const closeCreateRegex = /<\/BDS:create_file>/gi;
+
+  const openEnds = [];
+  const openAttrsList = [];
+  let openMatch;
+  while ((openMatch = openCreateRegex.exec(text)) !== null) {
+    openEnds.push(openMatch.index + openMatch[0].length);
+    openAttrsList.push(openMatch[1] || "");
+  }
+
+  const closeStarts = [];
+  let closeMatch;
+  while ((closeMatch = closeCreateRegex.exec(text)) !== null) {
+    closeStarts.push(closeMatch.index);
+  }
+
+  for (let i = 0; i < openEnds.length; i++) {
+    const endSearch = i < openEnds.length - 1 ? openEnds[i + 1] : text.length;
+    let realClose = -1;
+    for (let j = closeStarts.length - 1; j >= 0; j--) {
+      if (closeStarts[j] >= openEnds[i] && closeStarts[j] < endSearch) {
+        realClose = closeStarts[j];
+        break;
+      }
     }
+    if (realClose === -1) continue;
+
+    const attrs = parseTagAttributes(openAttrsList[i]);
+    const fileName = attrs.fileName || attrs.filename || attrs.path;
+    if (!fileName) continue;
+
     const content = normalizeTaggedCodeContent(
-      String(match[2] || ""),
+      text.substring(openEnds[i], realClose),
       "create_file"
     );
     result.createFiles.push({ fileName, content });
@@ -102,7 +128,7 @@ export function parseBdsMessage(rawText, isSettled = false) {
 
   const pairTagRegex =
     /<BDS:([A-Za-z0-9_:]+)([^>]*)>([\s\S]*?)<\/BDS:\1>/gi;
-  match = null;
+  let match;
   while ((match = pairTagRegex.exec(text)) !== null) {
     const name = String(match[1] || "").toLowerCase();
     const attrs = parseTagAttributes(match[2] || "");
@@ -182,7 +208,7 @@ export function parseBdsMessage(rawText, isSettled = false) {
      }
   }
 
-  const selfClosingCreateRegex = /<BDS:create_file([^>]*)\/>/gi;
+  const selfClosingCreateRegex = /<BDS:create_file\s+([^>]*)\/>/gi;
   while ((match = selfClosingCreateRegex.exec(text)) !== null) {
     const attrs = parseTagAttributes(match[1] || "");
     const fileName = attrs.fileName || attrs.filename || attrs.path;

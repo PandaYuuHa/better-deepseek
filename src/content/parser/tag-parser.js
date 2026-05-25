@@ -102,15 +102,17 @@ export function unwrapMarkdownCodeFence(content) {
   const trimmed = text.trim();
 
   // Match: ```lang\n...\n``` (single outer fence, nothing before/after)
-  const singleFenceMatch = trimmed.match(/^```(?:[a-zA-Z0-9_+.-]*)\s*\r?\n?([\s\S]*?)```\s*$/);
+  const singleFenceMatch = trimmed.match(/^```(?:[a-zA-Z0-9_+.-]*)[ \t]*\r?\n?([\s\S]*?)```\s*$/);
   if (singleFenceMatch) {
-    return singleFenceMatch[1].trim();
+    return singleFenceMatch[1];
   }
 
   // Handle unclosed fence: ```lang\n...code... (no closing ```)
-  const unclosedMatch = trimmed.match(/^```(?:[a-zA-Z0-9_+.-]*)\s*\r?\n?([\s\S]+)$/);
+  // Use only-leading-whitespace stripped text so trailing \n isn't lost
+  const leadTrimmed = text.replace(/^\s+/, '');
+  const unclosedMatch = leadTrimmed.match(/^```(?:[a-zA-Z0-9_+.-]*)[ \t]*\r?\n?([\s\S]+)$/);
   if (unclosedMatch) {
-    return unclosedMatch[1].trim();
+    return unclosedMatch[1];
   }
 
   // Not wrapped in a single fence — return as-is (preserves multiple nested code blocks)

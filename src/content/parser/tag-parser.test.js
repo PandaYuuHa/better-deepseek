@@ -21,7 +21,7 @@ describe("parseTagAttributes", () => {
 describe("unwrapMarkdownCodeFence", () => {
   it("unwraps fenced code blocks", () => {
     expect(unwrapMarkdownCodeFence("```js\nconsole.log(1);\n```")).toBe(
-      "console.log(1);",
+      "console.log(1);\n",
     );
   });
 
@@ -32,11 +32,11 @@ describe("unwrapMarkdownCodeFence", () => {
   it("keeps nested inner fences intact", () => {
     expect(
       unwrapMarkdownCodeFence("```markdown\n```js\nconsole.log(1)\n```\n```"),
-    ).toBe("```js\nconsole.log(1)\n```");
+    ).toBe("```js\nconsole.log(1)\n```\n");
   });
 
   it("strips stray leading and trailing fence markers", () => {
-    expect(unwrapMarkdownCodeFence("```\nhello\n```")).toBe("hello");
+    expect(unwrapMarkdownCodeFence("```\nhello\n```")).toBe("hello\n");
   });
 });
 
@@ -44,7 +44,7 @@ describe("normalizeTaggedCodeContent", () => {
   it("unwraps create_file content", () => {
     expect(
       normalizeTaggedCodeContent("```python\nprint('x')\n```", "create_file"),
-    ).toBe("print('x')");
+    ).toBe("print('x')\n");
   });
 
   it("strips leading chatter for tool code blocks", () => {
