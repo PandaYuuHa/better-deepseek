@@ -1,5 +1,6 @@
 <script>
   import { marked } from 'marked';
+  import { onMount } from 'svelte';
   import VisualizerCard from "./VisualizerCard.svelte";
   import ToolCard from "./ToolCard.svelte";
   import PptxCard from "./PptxCard.svelte";
@@ -25,6 +26,65 @@
    *   loading?: boolean
    * }} */
   let { text, blocks = [], loading = false, loadingIndex = 1 } = $props();
+
+  let answeredData = $state(null);
+  let outerOpen = $state(false);
+  let innerOpen = $state({});
+
+  let parsed = $derived.by(() => {
+    const qBlock = blocks.find(b => b.name === 'ask_question');
+    return qBlock ? parseQuestions(qBlock.content) : [];
+  });
+
+  $effect(() => {
+    if (parsed.length === 1) {
+      outerOpen = true;
+      innerOpen = { 0: true };
+    } else {
+      outerOpen = false;
+      innerOpen = {};
+    }
+  });
+
+  onMount(() => {
+    const handler = (e) => {
+      answeredData = e.detail;
+    };
+    window.addEventListener('bds-questions-answered', handler);
+    return () => window.removeEventListener('bds-questions-answered', handler);
+  });
+
+  function toggleOuter() {
+    outerOpen = !outerOpen;
+  }
+
+  function toggleInner(i) {
+    const next = { ...innerOpen };
+    next[i] = !next[i];
+    innerOpen = next;
+  }
+
+  function parseQuestions(content) {
+    try {
+      const parsed = JSON.parse(content);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function typeLabel(type) {
+    const labels = {
+      test: 'Single',
+      radio: 'Single',
+      single: 'Single',
+      checkbox: 'Multiple',
+      multiple: 'Multiple',
+      input: 'Text',
+      text: 'Text'
+    };
+    return labels[type] || type || '';
+  }
 
   // Configure marked for better rendering
   marked.setOptions({
@@ -59,18 +119,71 @@
       {:else if block.name === 'auto_code_result'}
         <AutoCodeResultCard language={block.attrs.language} status={block.attrs.status} output={block.content} />
       {:else if block.name === 'ask_question'}
-        <div class="bds-question-info-card">
-          <div class="bds-question-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
+        <div class="bds-question-info-card bds-questions-card" class:bds-q-collapsed={!outerOpen}>
+          <!-- Entire header is the toggle now, giving excellent click area and UX -->
+          <div 
+            class="bds-q-header-toggle" 
+            onclick={toggleOuter} 
+            role="button" 
+            tabindex="0" 
+            onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleOuter(); } }}
+          >
+            <div class="bds-question-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            
+            <div class="bds-q-title-area">
+              <span class="bds-question-title">{t('messageOverlay.questionsAsked')}</span>
+              {#if parsed.length > 0}
+                <span class="bds-q-count">({parsed.length})</span>
+              {/if}
+            </div>
+
+            <span class="bds-chevron">{outerOpen ? '▼' : '▶'}</span>
           </div>
-          <div class="bds-question-content">
-            <div class="bds-question-title">{t('messageOverlay.questionsAsked')}</div>
-            <div class="bds-question-subtitle">{t('messageOverlay.questionsSubtitle')}</div>
-          </div>
+
+          {#if outerOpen}
+            {#if parsed.length > 0}
+              <div class="bds-questions-list">
+                {#each parsed as q, i}
+                  <div class="bds-q-item">
+                    <div class="bds-q-header" onclick={() => toggleInner(i)} role="button" tabindex="0" onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleInner(i); } }}>
+                      <span class="bds-chevron">{innerOpen[i] ? '▼' : '▶'}</span>
+                      <span class="bds-q-num">{i + 1}.</span>
+                      <span class="bds-q-text">{q.question}</span>
+                      {#if typeLabel(q.type)}
+                        <span class="bds-q-type">{typeLabel(q.type)}</span>
+                      {/if}
+                    </div>
+                    {#if innerOpen[i]}
+                      <div class="bds-q-detail">
+                        {#if q.options?.length}
+                          <div class="bds-q-options">
+                            {#each q.options as opt}
+                              <div class="bds-q-opt-row">{opt}</div>
+                            {/each}
+                          </div>
+                        {/if}
+                        {#if answeredData?.answers?.[q.id || `q_${i}`]}
+                          <div class="bds-q-answer-row">
+                            <span class="bds-q-answer">→ {answeredData.answers[q.id || `q_${i}`]}</span>
+                          </div>
+                        {/if}
+                      </div>
+                    {/if}
+                  </div>
+                {/each}
+              </div>
+            {:else}
+              <div class="bds-questions-list">
+                <div class="bds-question-subtitle" style="padding: 8px; font-size: 13px; color: var(--bds-text-secondary, #8e8ea0);">{t('messageOverlay.questionsSubtitle')}</div>
+              </div>
+            {/if}
+          {/if}
         </div>
       {:else if block.name === 'character_create'}
         <div class="bds-question-info-card bds-character-card">
@@ -259,6 +372,163 @@
 
   .bds-memory-card {
     border-left: 3px solid #f59e0b;
+  }
+
+  /* Overrides for bds-questions-card */
+  .bds-questions-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0 !important;
+    gap: 0;
+  }
+
+  /* Header Toggle */
+  .bds-q-header-toggle {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background-color 0.2s ease;
+  }
+
+  .bds-q-header-toggle:hover {
+    background-color: var(--bds-bg-hover, rgba(255, 255, 255, 0.04));
+  }
+
+  /* Title and count wrapper */
+  .bds-q-title-area {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .bds-questions-card .bds-question-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--bds-text-primary, #ececec);
+    margin: 0;
+    padding: 0;
+    line-height: 1;
+    user-select: text;
+  }
+
+  .bds-questions-card .bds-q-count {
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--bds-text-secondary, #8e8ea0);
+    background: var(--bds-bg-hover, rgba(255, 255, 255, 0.08));
+    padding: 2px 6px;
+    border-radius: 6px;
+  }
+
+  .bds-chevron {
+    font-size: 11px;
+    color: var(--bds-text-tertiary, #6b6b7b);
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+  }
+
+  /* Expanded list style */
+  .bds-questions-list {
+    margin: 0;
+    padding: 0 16px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-top: 1px solid var(--bds-border, #3a3b3f);
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  .bds-q-item {
+    border-radius: 8px;
+  }
+
+  .bds-q-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+
+  .bds-q-header:hover {
+    background: var(--bds-bg-hover, rgba(255, 255, 255, 0.06));
+  }
+
+  .bds-q-num {
+    color: var(--bds-text-secondary, #8e8ea0);
+    font-weight: 600;
+    min-width: 20px;
+    flex-shrink: 0;
+    text-align: right;
+  }
+
+  .bds-q-text {
+    color: var(--bds-text-primary, #ececec);
+    flex-grow: 1;
+    line-height: 1.4;
+    user-select: text;
+  }
+
+  .bds-q-type {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--bds-accent, #5b7bff);
+    background: var(--bds-bg-hover, rgba(255, 255, 255, 0.08));
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .bds-q-detail {
+    margin: 4px 0 8px 32px;
+    padding-left: 12px;
+    border-left: 2px solid var(--bds-bg-hover, rgba(255, 255, 255, 0.08));
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .bds-q-options {
+    font-size: 13px;
+    color: var(--bds-text-secondary, #8e8ea0);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    user-select: text;
+  }
+
+  .bds-q-opt-row {
+    padding: 2px 0;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .bds-q-answer-row {
+    display: flex;
+    align-items: center;
+  }
+
+  .bds-q-answer {
+    color: var(--bds-accent, #5b7bff);
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--bds-bg-hover, rgba(255, 255, 255, 0.08));
+    padding: 2px 10px;
+    border-radius: 12px;
+    user-select: text;
   }
 
   .bds-message-overlay {

@@ -230,6 +230,33 @@
       responseText += "\n\n";
     });
 
+    const answersMap = {};
+    questions.forEach((q, index) => {
+      const key = q.id || `q_${index}`;
+      const answer = answers[key];
+      const custom = customAnswers[key];
+      if (Array.isArray(answer)) {
+        const selected = [...answer];
+        if (q.allowCustom && custom?.trim()) {
+          selected.push(`Other: ${custom.trim()}`);
+        }
+        answersMap[key] = selected.length > 0 ? selected.join(', ') : null;
+      } else {
+        if (q.allowCustom && answer === "Other" && custom?.trim()) {
+          answersMap[key] = custom.trim();
+        } else if (answer) {
+          answersMap[key] = answer;
+        } else if (custom?.trim()) {
+          answersMap[key] = custom.trim();
+        } else {
+          answersMap[key] = null;
+        }
+      }
+    });
+    window.dispatchEvent(new CustomEvent('bds-questions-answered', {
+      detail: { questions: JSON.parse(JSON.stringify(questions)), answers: answersMap }
+    }));
+
     injectTextIntoDeepSeek(responseText.trim());
     appState.activeQuestions = null;
     visible = false;
