@@ -232,6 +232,8 @@ class MainActivity : ComponentActivity() {
                 "NEXT_LOCALE=$localeTag; Path=/; SameSite=Lax"
         )
         cookieManager.flush()
+    }
+
     override fun onResume() {
         super.onResume()
         if (::cookieManager.isInitialized) {
