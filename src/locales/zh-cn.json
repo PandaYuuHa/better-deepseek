@@ -413,7 +413,12 @@
     },
     "visualizerCard": {
       "title": "可视化工具",
-      "subtitle": "交互式模拟"
+      "subtitle": "交互式模拟",
+      "openInPanel": "在面板中打开"
+    },
+    "previewPanel": {
+      "close": "关闭",
+      "download": "下载 .html"
     },
     "htmlPreview": {
       "title": "HTML 预览",

@@ -6,12 +6,17 @@
   import SelectionOverlay from "./SelectionOverlay.svelte";
   import StatusBanner from "./StatusBanner.svelte";
   import AnnouncementBanner from "./AnnouncementBanner.svelte";
+  import PreviewPanel from "./PreviewPanel.svelte";
   import ApiPlayground from "../api-playground/ApiPlayground.svelte";
   import appState from "../state.js";
 
   let drawerOpen = $state(false);
   let apiPlaygroundOpen = $state(false);
   let whatsNewPending = $state(appState.whatsNewPending);
+
+  let previewVisible = $state(false);
+  let previewTitle = $state("");
+  let previewContent = $state("");
 
   /** @type {Array<{id: number, message: string}>} */
   let toasts = $state([]);
@@ -55,6 +60,18 @@
 
   export function refreshWhatsNew() {
     whatsNewPending = appState.whatsNewPending;
+  }
+
+  export function showPreviewPanel(title, content) {
+    previewTitle = title;
+    previewContent = content;
+    previewVisible = true;
+  }
+
+  export function hidePreviewPanel() {
+    previewVisible = false;
+    previewTitle = "";
+    previewContent = "";
   }
 
   async function toggleDrawer() {
@@ -109,3 +126,9 @@
 <SelectionOverlay />
 <StatusBanner />
 <AnnouncementBanner />
+<PreviewPanel
+  visible={previewVisible}
+  title={previewTitle}
+  content={previewContent}
+  onclose={hidePreviewPanel}
+/>

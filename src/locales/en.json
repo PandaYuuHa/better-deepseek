@@ -417,7 +417,12 @@
     },
     "visualizerCard": {
       "title": "Visualizer",
-      "subtitle": "Interactive Simulation"
+      "subtitle": "Interactive Simulation",
+      "openInPanel": "Open in Panel"
+    },
+    "previewPanel": {
+      "close": "Close",
+      "download": "Download .html"
     },
     "htmlPreview": {
       "title": "HTML Preview",

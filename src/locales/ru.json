@@ -413,7 +413,12 @@
     },
     "visualizerCard": {
       "title": "Визуализатор",
-      "subtitle": "Интерактивная симуляция"
+      "subtitle": "Интерактивная симуляция",
+      "openInPanel": "Открыть в панели"
+    },
+    "previewPanel": {
+      "close": "Закрыть",
+      "download": "Скачать .html"
     },
     "htmlPreview": {
       "title": "Предпросмотр HTML",

@@ -2,6 +2,7 @@
   import { marked } from 'marked';
   import { onMount } from 'svelte';
   import VisualizerCard from "./VisualizerCard.svelte";
+  import appState from "../state.js";
   import ToolCard from "./ToolCard.svelte";
   import PptxCard from "./PptxCard.svelte";
   import ExcelCard from "./ExcelCard.svelte";
@@ -107,7 +108,10 @@
   <div class="bds-tool-blocks">
     {#each blocks as block}
       {#if block.name === 'visualizer'}
-        <VisualizerCard content={block.content} />
+        <VisualizerCard
+          content={block.content}
+          onopenpanel={(srcdoc) => appState.ui?.showPreviewPanel?.('Visualizer', srcdoc)}
+        />
       {:else if block.name === 'pptx'}
         <PptxCard content={block.content} />
       {:else if block.name === 'excel'}

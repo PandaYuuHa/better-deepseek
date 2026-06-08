@@ -413,7 +413,12 @@
     },
     "visualizerCard": {
       "title": "Görselleştirici",
-      "subtitle": "Etkileşimli Simülasyon"
+      "subtitle": "Etkileşimli Simülasyon",
+      "openInPanel": "Panelde Aç"
+    },
+    "previewPanel": {
+      "close": "Kapat",
+      "download": ".html İndir"
     },
     "htmlPreview": {
       "title": "HTML Önizleme",

@@ -14,6 +14,8 @@ import state from "../state.js";
  * @property {() => void} refreshSkills
  * @property {() => void} refreshMemories
  * @property {() => void} refreshProjects
+ * @property {(title: string, content: string) => void} showPreviewPanel
+ * @property {() => void} hidePreviewPanel
  */
 
 /**
@@ -47,6 +49,8 @@ export function mountUi() {
     refreshProjects: () => app.refreshProjects(),
     refreshWhatsNew: () => app.refreshWhatsNew(),
     refreshSavedItems: () => app.refreshSavedItems(),
+    showPreviewPanel: (title, content) => app.showPreviewPanel(title, content),
+    hidePreviewPanel: () => app.hidePreviewPanel(),
   };
 
   state.ui = api;
