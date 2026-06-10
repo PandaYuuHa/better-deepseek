@@ -17,7 +17,7 @@ import { parseMemoryWrite } from "./memory-parser.js";
 import { sanitizeVisibleText } from "./text-sanitizer.js";
 
 // Tool renderers that have visual cards
-const RENDERABLE_TOOLS = new Set(["html", "latex", "visualizer", "pptx", "excel", "docx", "ask_question", "character_create", "skill_create", "auto:code_runner", "auto_code_result", "auto:request_web_fetch", "auto:request_github_fetch", "auto:search"]);
+const RENDERABLE_TOOLS = new Set(["html", "latex", "visualizer", "pptx", "excel", "docx", "ask_question", "character_create", "skill_create", "auto:code_runner", "auto_code_result", "auto:request_web_fetch", "auto:request_github_fetch", "auto:search", "deep_research_plan", "deep_research_status", "deep_research_report"]);
 
 /**
  * Parse a raw message text for all BDS tags.
@@ -63,6 +63,11 @@ export function parseBdsMessage(rawText, isSettled = false) {
     characterCreates: [],
     skillCreates: [],
     askQuestions: [],
+    deepResearch: {
+      plans: [],
+      statuses: [],
+      reports: [],
+    },
     autoRequests: {
       webFetch: [],
       githubFetch: [],
@@ -174,6 +179,33 @@ export function parseBdsMessage(rawText, isSettled = false) {
       } catch (e) {
         console.error("Failed to parse ask_question JSON:", e);
       }
+    }
+
+    if (name === "deep_research_plan") {
+      const runId = attrs.runId || attrs.runid || "";
+      try {
+        const plan = JSON.parse(content);
+        result.deepResearch.plans.push({ runId, plan });
+      } catch (e) {
+        // Store raw content if JSON is malformed
+        result.deepResearch.plans.push({ runId, plan: null, raw: content, error: e.message });
+      }
+    }
+
+    if (name === "deep_research_status") {
+      const runId = attrs.runId || attrs.runid || "";
+      try {
+        const status = JSON.parse(content);
+        result.deepResearch.statuses.push({ runId, status });
+      } catch (e) {
+        result.deepResearch.statuses.push({ runId, status: null, raw: content, error: e.message });
+      }
+    }
+
+    if (name === "deep_research_report") {
+      const runId = attrs.runId || attrs.runid || "";
+      // Report is markdown, preserve as-is
+      result.deepResearch.reports.push({ runId, markdown: content });
     }
   }
 

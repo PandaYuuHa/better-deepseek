@@ -25,6 +25,8 @@ const processedGitHubFetches = new Set();
 const processedTwitterFetches = new Set();
 const processedYouTubeFetches = new Set();
 const processedSearchQueries = new Set();
+// Per-run search deduplication for deep research
+const processedRunSearchQueries = new Map();
 
 export async function handleAutoWebFetch(url) {
   if (processedWebFetches.has(url)) return;
@@ -154,6 +156,77 @@ export async function handleAutoSearch(query, deepFetch = 0) {
     const errorFile = new File([errorBlob], `search_error_${q.replace(/[^a-zA-Z0-9]/g, "_")}.txt`, { type: "text/plain" });
     injectFileAndSend(errorFile, `<BetterDeepSeek>\n[BDS:AUTO] Search failed for: ${q}\n</BetterDeepSeek>`);
   }
+}
+
+/**
+ * Handles automatic web search requests scoped to a deep research run.
+ * Uses per-run deduplication so repeated research runs are not blocked by the global query set.
+ * @param {string} query - Search query
+ * @param {number} [deepFetch=0] - Number of top results to also fetch full content for
+ * @param {string} runId - Deep research run ID
+ */
+export async function handleAutoSearchForRun(query, deepFetch = 0, runId = "") {
+  const q = query.trim();
+  if (!runId) {
+    // Fallback to global dedupe
+    return handleAutoSearch(q, deepFetch);
+  }
+
+  if (!processedRunSearchQueries.has(runId)) {
+    processedRunSearchQueries.set(runId, new Set());
+  }
+  const runSet = processedRunSearchQueries.get(runId);
+  if (runSet.has(q)) return;
+  runSet.add(q);
+
+  console.log(`[BDS:AUTO] Starting run-scoped search for: ${q} (runId=${runId}, deepFetch=${deepFetch})`);
+
+  try {
+    const result = await searchWeb(q, deepFetch, (status) => {
+      console.log(`[BDS:AUTO] Search Status: ${status}`);
+    });
+
+    if (result.file) {
+      const payload = JSON.stringify({
+        query: result.query,
+        deepFetch: result.deepFetch,
+        count: result.results.length,
+        results: result.results,
+        runId,
+      });
+      const autoMessage = [
+        `<BetterDeepSeek>`,
+        `[BDS:AUTO] Search Result for: ${result.query} (runId=${runId})`,
+        `[BDS:AUTO_SEARCH_RESULT]`,
+        payload,
+        `[/BDS:AUTO_SEARCH_RESULT]`,
+        `</BetterDeepSeek>`
+      ].join("\n");
+      injectFileAndSend(result.file, autoMessage);
+    }
+  } catch (err) {
+    console.error("[BDS:AUTO] Run-scoped Search Failed:", err);
+    const errorBlob = new Blob([`Failed to search "${q}":\n\n${err.message}`], { type: "text/plain" });
+    const errorFile = new File([errorBlob], `search_error_${q.replace(/[^a-zA-Z0-9]/g, "_")}.txt`, { type: "text/plain" });
+    injectFileAndSend(errorFile, `<BetterDeepSeek>\n[BDS:AUTO] Search failed for: ${q} (runId=${runId})\n</BetterDeepSeek>`);
+  }
+}
+
+/**
+ * Clear run-scoped search history for a specific run.
+ * @param {string} runId
+ */
+export function clearRunSearchHistory(runId) {
+  processedRunSearchQueries.delete(runId);
+}
+
+/**
+ * Get the set of processed queries for a run (for testing).
+ * @param {string} runId
+ * @returns {Set<string>|undefined}
+ */
+export function getRunSearchQueries(runId) {
+  return processedRunSearchQueries.get(runId);
 }
 
 /**

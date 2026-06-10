@@ -20,6 +20,7 @@ export const STORAGE_KEYS = {
   apiPlaygroundKeys: "bds_api_playground_keys",
   apiPlaygroundHistory: "bds_api_playground_history",
   apiPlaygroundSaved: "bds_api_playground_saved",
+  deepResearchRuns: "bds_deep_research_runs",
 };
 
 
