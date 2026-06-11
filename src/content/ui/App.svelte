@@ -2,6 +2,7 @@
   import Drawer from "./Drawer.svelte";
   import ToastStack from "./ToastStack.svelte";
   import QuestionPanel from "./QuestionPanel.svelte";
+  import DeepResearchRevisionPanel from "./DeepResearchRevisionPanel.svelte";
   import WhatsNewModal from "./WhatsNewModal.svelte";
   import SelectionOverlay from "./SelectionOverlay.svelte";
   import StatusBanner from "./StatusBanner.svelte";
@@ -118,6 +119,7 @@
 
 <ToastStack {toasts} />
 <QuestionPanel />
+<DeepResearchRevisionPanel />
 
 {#if whatsNewPending}
   <WhatsNewModal onDismiss={() => whatsNewPending = false} />

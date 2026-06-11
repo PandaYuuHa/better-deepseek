@@ -25,6 +25,8 @@ const processedGitHubFetches = new Set();
 const processedTwitterFetches = new Set();
 const processedYouTubeFetches = new Set();
 const processedSearchQueries = new Set();
+// Per-run search deduplication for deep research
+const processedRunSearchQueries = new Map();
 
 export async function handleAutoWebFetch(url) {
   if (processedWebFetches.has(url)) return;
@@ -157,6 +159,77 @@ export async function handleAutoSearch(query, deepFetch = 0) {
 }
 
 /**
+ * Handles automatic web search requests scoped to a deep research run.
+ * Uses per-run deduplication so repeated research runs are not blocked by the global query set.
+ * @param {string} query - Search query
+ * @param {number} [deepFetch=0] - Number of top results to also fetch full content for
+ * @param {string} runId - Deep research run ID
+ */
+export async function handleAutoSearchForRun(query, deepFetch = 0, runId = "") {
+  const q = query.trim();
+  if (!runId) {
+    // Fallback to global dedupe
+    return handleAutoSearch(q, deepFetch);
+  }
+
+  if (!processedRunSearchQueries.has(runId)) {
+    processedRunSearchQueries.set(runId, new Set());
+  }
+  const runSet = processedRunSearchQueries.get(runId);
+  if (runSet.has(q)) return;
+  runSet.add(q);
+
+  console.log(`[BDS:AUTO] Starting run-scoped search for: ${q} (runId=${runId}, deepFetch=${deepFetch})`);
+
+  try {
+    const result = await searchWeb(q, deepFetch, (status) => {
+      console.log(`[BDS:AUTO] Search Status: ${status}`);
+    });
+
+    if (result.file) {
+      const payload = JSON.stringify({
+        query: result.query,
+        deepFetch: result.deepFetch,
+        count: result.results.length,
+        results: result.results,
+        runId,
+      });
+      const autoMessage = [
+        `<BetterDeepSeek>`,
+        `[BDS:AUTO] Search Result for: ${result.query} (runId=${runId})`,
+        `[BDS:AUTO_SEARCH_RESULT]`,
+        payload,
+        `[/BDS:AUTO_SEARCH_RESULT]`,
+        `</BetterDeepSeek>`
+      ].join("\n");
+      injectFileAndSend(result.file, autoMessage);
+    }
+  } catch (err) {
+    console.error("[BDS:AUTO] Run-scoped Search Failed:", err);
+    const errorBlob = new Blob([`Failed to search "${q}":\n\n${err.message}`], { type: "text/plain" });
+    const errorFile = new File([errorBlob], `search_error_${q.replace(/[^a-zA-Z0-9]/g, "_")}.txt`, { type: "text/plain" });
+    injectFileAndSend(errorFile, `<BetterDeepSeek>\n[BDS:AUTO] Search failed for: ${q} (runId=${runId})\n</BetterDeepSeek>`);
+  }
+}
+
+/**
+ * Clear run-scoped search history for a specific run.
+ * @param {string} runId
+ */
+export function clearRunSearchHistory(runId) {
+  processedRunSearchQueries.delete(runId);
+}
+
+/**
+ * Get the set of processed queries for a run (for testing).
+ * @param {string} runId
+ * @returns {Set<string>|undefined}
+ */
+export function getRunSearchQueries(runId) {
+  return processedRunSearchQueries.get(runId);
+}
+
+/**
  * Handles automatic reporting of code runner results back to the AI.
  */
 export async function handleAutoCodeRunnerResult(language, status, output) {
@@ -213,47 +286,228 @@ export async function handleAutoErrorReport(toolName, error, originalCode) {
   injectPureTextAndSend(autoMessage);
 }
 
-export function injectPureTextAndSend(autoMessage) {
-  // We reuse the logic from injectFileAndSend but skip the file part
-  const editor = document.querySelector('#chat-input, textarea[placeholder], div[contenteditable="true"]');
-  if (editor) {
-    if (editor.tagName.toLowerCase() === 'textarea') {
-      editor.value = autoMessage;
-      editor.dispatchEvent(new Event('input', { bubbles: true }));
-    } else if (editor.isContentEditable) {
-      editor.innerText = autoMessage;
-      editor.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+export function injectPureTextAndSend(autoMessage, logLabel = "Text prompt") {
+  if (!setChatInputText(autoMessage)) {
+    console.error(`[BDS:AUTO] Failed to send ${logLabel}: chat input was not found or could not be updated.`);
+    return false;
   }
 
-  // Phase 2: Wait for button and send
+  sendCurrentChatInput(logLabel);
+  return true;
+}
+
+function findChatEditor() {
+  const selectors = [
+    "textarea#chat-input",
+    ".ds-textarea textarea",
+    '[role="textbox"][contenteditable]',
+    '[role="textbox"]',
+    ".ProseMirror[contenteditable]",
+    "textarea[placeholder]",
+    "input[placeholder]",
+    "[contenteditable]",
+  ];
+
+  for (const selector of selectors) {
+    const editor = Array.from(document.querySelectorAll(selector))
+      .find((candidate) => !isBdsOwnedElement(candidate));
+    if (editor) return editor;
+  }
+
+  return null;
+}
+
+function isBdsOwnedElement(element) {
+  return Boolean(element?.closest?.(
+    "#bds-root, .bds-question-panel, .bds-dr-revision-panel, .bds-attach-wrapper, .bds-rag-preview",
+  ));
+}
+
+function makeInputEvent(inputType = "insertText", data = "") {
+  if (typeof InputEvent === "function") {
+    return new InputEvent("input", {
+      bubbles: true,
+      cancelable: true,
+      inputType,
+      data,
+    });
+  }
+  return new Event("input", { bubbles: true });
+}
+
+function dispatchEditorEvents(editor, inputType = "insertText", data = "") {
+  editor.dispatchEvent(makeInputEvent(inputType, data));
+  editor.dispatchEvent(new Event("change", { bubbles: true }));
+  editor.dispatchEvent(new KeyboardEvent("keyup", { key: "Process", bubbles: true }));
+}
+
+function dispatchBeforeInput(editor, inputType = "insertText", data = "") {
+  if (typeof InputEvent === "function") {
+    editor.dispatchEvent(new InputEvent("beforeinput", {
+      bubbles: true,
+      cancelable: true,
+      inputType,
+      data,
+    }));
+    return;
+  }
+  editor.dispatchEvent(new Event("beforeinput", { bubbles: true, cancelable: true }));
+}
+
+function setContentEditableDom(editor, value) {
+  const shouldUseParagraphs =
+    editor.classList?.contains("ProseMirror") ||
+    editor.querySelector?.("p");
+
+  if (!shouldUseParagraphs) {
+    editor.textContent = value;
+    return;
+  }
+
+  const lines = String(value || "").split("\n");
+  const nodes = lines.map((line) => {
+    const paragraph = document.createElement("p");
+    paragraph.textContent = line || "\u200b";
+    return paragraph;
+  });
+  editor.replaceChildren(...nodes);
+}
+
+function moveCaretToEnd(editor) {
+  const selection = window.getSelection?.();
+  if (!selection || !document.createRange) return;
+  const range = document.createRange();
+  range.selectNodeContents(editor);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+export function setChatInputText(text) {
+  const editor = findChatEditor();
+  if (!editor) return false;
+
+  const value = String(text || "");
+  editor.focus();
+
+  const tagName = String(editor.tagName || "").toLowerCase();
+  if (tagName === "textarea" || tagName === "input") {
+    const prototype = tagName === "textarea"
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(
+      prototype,
+      "value",
+    )?.set;
+    if (setter) {
+      setter.call(editor, value);
+    } else {
+      editor.value = value;
+    }
+    dispatchEditorEvents(editor, "insertText", value);
+    return true;
+  }
+
+  const isContentEditable =
+    editor.isContentEditable ||
+    editor.contentEditable === "true" ||
+    editor.contentEditable === "plaintext-only" ||
+    editor.hasAttribute("contenteditable");
+
+  if (isContentEditable) {
+    const selection = window.getSelection?.();
+    if (selection && document.createRange) {
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    let inserted = false;
+    if (typeof document.execCommand === "function") {
+      inserted = document.execCommand("insertText", false, value);
+    }
+
+    if (!inserted) {
+      setContentEditableDom(editor, value);
+    } else if ((editor.textContent || "").trim() !== value.trim()) {
+      setContentEditableDom(editor, value);
+    }
+    moveCaretToEnd(editor);
+    dispatchBeforeInput(editor, "insertText", value);
+    dispatchEditorEvents(editor, "insertText", value);
+    return true;
+  }
+
+  return false;
+}
+
+function findSendButton() {
+  const buttons = Array.from(document.querySelectorAll('div[role="button"], button'));
+  return buttons.find((button) => {
+    const label = `${button.title || ""} ${button.ariaLabel || ""} ${button.getAttribute("aria-label") || ""}`
+      .toLowerCase()
+      .trim();
+    const isSend =
+      button.querySelector('svg path[d*="M8.3125"], .ds-icon-send') ||
+      button.querySelector('svg path[d*="M13.12 19.98"]') ||
+      button.querySelector('svg path[d*="M12 19"]') ||
+      button.title === "Send message" ||
+      button.ariaLabel === "Send Message" ||
+      button.getAttribute("aria-label") === "Send Message" ||
+      label.includes("send message") ||
+      label === "send";
+    const isBdsControl =
+      button.classList.contains("bds-plus-btn") ||
+      button.classList.contains("bds-deep-research-toggle") ||
+      isBdsOwnedElement(button) ||
+      button.closest("#bds-root");
+    return isSend && !isBdsControl;
+  });
+}
+
+function isSendButtonDisabled(sendBtn) {
+  return (
+    sendBtn.getAttribute("aria-disabled") === "true" ||
+    sendBtn.classList.contains("ds-icon-button--disabled") ||
+    sendBtn.disabled === true
+  );
+}
+
+function sendCurrentChatInput(logLabel = "Auto message") {
   let attempts = 0;
   const maxAttempts = 50;
+  let enterFallbackSent = false;
 
   const attemptSend = () => {
     attempts++;
-    const buttons = Array.from(document.querySelectorAll('div[role="button"], button'));
-    const sendBtn = buttons.find(b => {
-      const isSend = b.querySelector('svg path[d*="M8.3125"], .ds-icon-send') || b.title === "Send message";
-      const isAttach = b.classList.contains('bds-plus-btn') || b.querySelector('svg line');
-      return isSend && !isAttach;
-    });
+    const sendBtn = findSendButton();
 
     if (sendBtn) {
-      const isDisabled = sendBtn.getAttribute('aria-disabled') === 'true' ||
-        sendBtn.classList.contains('ds-icon-button--disabled');
-
-      if (!isDisabled) {
+      if (!isSendButtonDisabled(sendBtn)) {
         sendBtn.click();
-        console.log(`[BDS:AUTO] Error report sent successfully after ${attempts} attempts.`);
+        console.log(`[BDS:AUTO] ${logLabel} sent successfully after ${attempts} attempts.`);
         return;
+      }
+    }
+
+    if (!enterFallbackSent && attempts === 6) {
+      enterFallbackSent = true;
+      const editor = findChatEditor();
+      if (editor) {
+        editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+        editor.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
       }
     }
 
     if (attempts < maxAttempts) {
       setTimeout(attemptSend, 200);
     } else {
-      console.error("[BDS:AUTO] Failed to send error report: button stayed disabled or was not found.");
+      console.error(`[BDS:AUTO] Failed to send ${logLabel}: button stayed disabled or was not found.`);
+      const editor = findChatEditor();
+      if (editor) {
+        editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      }
     }
   };
 
@@ -297,57 +551,8 @@ async function injectFileAndSend(file, autoMessage = "") {
 
   // Phase 1: Inject text and file
   if (autoMessage) {
-    const editor = document.querySelector('#chat-input, textarea[placeholder], div[contenteditable="true"]');
-    if (editor) {
-      if (editor.tagName.toLowerCase() === 'textarea') {
-        editor.value = autoMessage;
-        editor.dispatchEvent(new Event('input', { bubbles: true }));
-      } else if (editor.isContentEditable) {
-        editor.innerText = autoMessage;
-        editor.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    }
+    setChatInputText(autoMessage);
   }
 
-  // Phase 2: Wait for button and send
-  let attempts = 0;
-  const maxAttempts = 50; // 50 * 200ms = 10s max wait
-
-  const attemptSend = () => {
-    attempts++;
-
-    // Find the send button
-    // It usually has an arrow-up icon. We look for a role="button" that isn't the attach button.
-    const buttons = Array.from(document.querySelectorAll('div[role="button"], button'));
-    const sendBtn = buttons.find(b => {
-      const isSend = b.querySelector('svg path[d*="M8.3125"], .ds-icon-send') || b.title === "Send message";
-      const isAttach = b.classList.contains('bds-plus-btn') || b.querySelector('svg line');
-      return isSend && !isAttach;
-    });
-
-    if (sendBtn) {
-      const isDisabled = sendBtn.getAttribute('aria-disabled') === 'true' ||
-        sendBtn.classList.contains('ds-icon-button--disabled');
-
-      if (!isDisabled) {
-        sendBtn.click();
-        console.log(`[BDS:AUTO] Sent successfully after ${attempts} attempts.`);
-        return;
-      }
-    }
-
-    if (attempts < maxAttempts) {
-      setTimeout(attemptSend, 200);
-    } else {
-      console.error("[BDS:AUTO] Failed to send: button stayed disabled or was not found.");
-      // Last ditch effort: Try Enter key
-      const editor = document.querySelector('#chat-input, textarea[placeholder], div[contenteditable="true"]');
-      if (editor) {
-        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-      }
-    }
-  };
-
-  // Start polling
-  setTimeout(attemptSend, 500);
+  sendCurrentChatInput("Auto file message");
 }

@@ -77,6 +77,80 @@ describe("auto integration", () => {
     expect(sendButton.click).toHaveBeenCalledOnce();
   });
 
+  it("injects pure text and sends it through the chat input", async () => {
+    const { injectPureTextAndSend } = await importAutoModule();
+
+    injectPureTextAndSend("Deep Research approval prompt");
+    await vi.advanceTimersByTimeAsync(600);
+
+    expect(document.querySelector("#chat-input").value).toBe("Deep Research approval prompt");
+    expect(document.querySelector("button").click).toHaveBeenCalledOnce();
+  });
+
+  it("sets contenteditable chat input text through the shared editor helper", async () => {
+    document.body.innerHTML = '<div contenteditable="true"></div>';
+    const editor = document.querySelector('[contenteditable="true"]');
+    const inputListener = vi.fn();
+    editor.addEventListener("input", inputListener);
+    const { setChatInputText } = await importAutoModule();
+
+    expect(setChatInputText("Revision request")).toBe(true);
+
+    expect(editor.textContent).toBe("Revision request");
+    expect(inputListener).toHaveBeenCalled();
+  });
+
+  it("sets plaintext-only contenteditable chat input text", async () => {
+    document.body.innerHTML = '<div role="textbox" contenteditable="plaintext-only"></div>';
+    const editor = document.querySelector('[role="textbox"]');
+    const inputListener = vi.fn();
+    editor.addEventListener("input", inputListener);
+    const { setChatInputText } = await importAutoModule();
+
+    expect(setChatInputText("Revision request")).toBe(true);
+
+    expect(editor.textContent).toBe("Revision request");
+    expect(inputListener).toHaveBeenCalled();
+  });
+
+  it("ignores BDS panel textareas when choosing the chat input", async () => {
+    document.body.innerHTML = `
+      <div class="ds-textarea">
+        <div role="textbox" contenteditable="plaintext-only"></div>
+        <div class="bds-dr-revision-panel">
+          <textarea placeholder="Describe what should change"></textarea>
+        </div>
+      </div>
+    `;
+    const editor = document.querySelector('[role="textbox"]');
+    const panelTextarea = document.querySelector(".bds-dr-revision-panel textarea");
+    const { setChatInputText } = await importAutoModule();
+
+    expect(setChatInputText("Revision request")).toBe(true);
+
+    expect(editor.textContent).toBe("Revision request");
+    expect(panelTextarea.value).toBe("");
+  });
+
+  it("sets ProseMirror-style contenteditable chat input as paragraphs", async () => {
+    document.body.innerHTML = '<div class="ProseMirror" contenteditable="true"><p><br></p></div>';
+    const editor = document.querySelector(".ProseMirror");
+    const beforeInputListener = vi.fn();
+    const inputListener = vi.fn();
+    editor.addEventListener("beforeinput", beforeInputListener);
+    editor.addEventListener("input", inputListener);
+    const { setChatInputText } = await importAutoModule();
+
+    expect(setChatInputText("Line one\nLine two")).toBe(true);
+
+    expect(Array.from(editor.querySelectorAll("p")).map((p) => p.textContent)).toEqual([
+      "Line one",
+      "Line two",
+    ]);
+    expect(beforeInputListener).toHaveBeenCalled();
+    expect(inputListener).toHaveBeenCalled();
+  });
+
   it("creates an error attachment when github fetch fails", async () => {
     readerMocks.fetchGitHubRepo.mockRejectedValue(new Error("boom"));
     const { handleAutoGitHubFetch } = await importAutoModule();

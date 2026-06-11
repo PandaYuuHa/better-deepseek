@@ -20,12 +20,14 @@ export const STORAGE_KEYS = {
   apiPlaygroundKeys: "bds_api_playground_keys",
   apiPlaygroundHistory: "bds_api_playground_history",
   apiPlaygroundSaved: "bds_api_playground_saved",
+  deepResearchRuns: "bds_deep_research_runs",
 };
 
 
 // ── Bridge Events (content ↔ injected) ──
 export const BRIDGE_EVENTS = {
   configUpdate: "bds:config-update",
+  deepResearchConfigUpdate: "bds:deep-research-config-update",
   requestConfig: "bds:request-config",
   networkState: "bds:network-state",
   markVoiceMessage: "bds:mark-voice-message",
@@ -703,7 +705,7 @@ export const DEFAULT_REMOTE_CONFIG = {
     apiPlayground: { enabled: true },
     attachMenu: {
       enabled: true,
-      expertMode: { show: false, showPlus: true, showUploadFile: false, showUploadFolder: false, showGithub: true, showWeb: true, showProject: true, showVoice: true },
+      expertMode: { show: true, showPlus: false, showUploadFile: false, showUploadFolder: false, showGithub: false, showWeb: false, showProject: true, showVoice: true },
       instantMode: { show: true, showPlus: true, showUploadFile: true, showUploadFolder: true, showGithub: true, showWeb: true, showProject: true, showVoice: true },
       deepthinkMode: { show: true, showPlus: true, showUploadFile: true, showUploadFolder: true, showGithub: true, showWeb: true, showProject: true, showVoice: true },
     },

@@ -13,11 +13,12 @@ import {
   parseTagAttributes,
   normalizeTaggedCodeContent,
 } from "./tag-parser.js";
+import { parseLooseJson } from "./json-repair.js";
 import { parseMemoryWrite } from "./memory-parser.js";
 import { sanitizeVisibleText } from "./text-sanitizer.js";
 
 // Tool renderers that have visual cards
-const RENDERABLE_TOOLS = new Set(["html", "latex", "visualizer", "pptx", "excel", "docx", "ask_question", "character_create", "skill_create", "auto:code_runner", "auto_code_result", "auto:request_web_fetch", "auto:request_github_fetch", "auto:search"]);
+const RENDERABLE_TOOLS = new Set(["html", "latex", "visualizer", "pptx", "excel", "docx", "ask_question", "character_create", "skill_create", "auto:code_runner", "auto_code_result", "auto:request_web_fetch", "auto:request_github_fetch", "auto:search", "deep_research_plan", "deep_research_status", "deep_research_report"]);
 
 /**
  * Parse a raw message text for all BDS tags.
@@ -63,6 +64,11 @@ export function parseBdsMessage(rawText, isSettled = false) {
     characterCreates: [],
     skillCreates: [],
     askQuestions: [],
+    deepResearch: {
+      plans: [],
+      statuses: [],
+      reports: [],
+    },
     autoRequests: {
       webFetch: [],
       githubFetch: [],
@@ -175,6 +181,34 @@ export function parseBdsMessage(rawText, isSettled = false) {
         console.error("Failed to parse ask_question JSON:", e);
       }
     }
+
+    if (name === "deep_research_plan") {
+      const runId = attrs.runId || attrs.runid || "";
+      const parsedPlan = parseLooseJson(content);
+      result.deepResearch.plans.push({
+        runId,
+        plan: parsedPlan.value,
+        raw: parsedPlan.value ? "" : content,
+        error: parsedPlan.error,
+      });
+    }
+
+    if (name === "deep_research_status") {
+      const runId = attrs.runId || attrs.runid || "";
+      const parsedStatus = parseLooseJson(content);
+      result.deepResearch.statuses.push({
+        runId,
+        status: parsedStatus.value,
+        raw: parsedStatus.value ? "" : content,
+        error: parsedStatus.error,
+      });
+    }
+
+    if (name === "deep_research_report") {
+      const runId = attrs.runId || attrs.runid || "";
+      // Report is markdown, preserve as-is
+      result.deepResearch.reports.push({ runId, markdown: content });
+    }
   }
 
   const autoWebFetchRegex = /<BDS:AUTO:REQUEST_WEB_FETCH>([\s\S]*?)<\/BDS:AUTO:REQUEST_WEB_FETCH>/gi;
@@ -215,7 +249,8 @@ export function parseBdsMessage(rawText, isSettled = false) {
      if (!query) continue;
      const attrs = parseTagAttributes(match[1] || "");
      const deepFetch = Math.max(0, parseInt(attrs.deepFetch, 10) || 0);
-     result.autoRequests.searchQueries.push({ query, deepFetch });
+     const runId = attrs.runId || attrs.runid || "";
+     result.autoRequests.searchQueries.push({ query, deepFetch, runId });
   }
 
   const selfClosingCreateRegex = /<BDS:create_file\s+([^>]*)\/>/gi;

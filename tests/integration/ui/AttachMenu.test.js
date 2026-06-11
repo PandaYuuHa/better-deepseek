@@ -53,6 +53,7 @@ vi.mock("../../../src/content/bridge.js", () => bridgeMocks);
 
 import AttachMenu from "../../../src/content/ui/AttachMenu.svelte";
 import state from "../../../src/content/state.js";
+import { remoteConfig } from "../../../src/lib/remote-config.svelte.js";
 import { resetAppState } from "../../helpers/app-state.js";
 import { renderSvelte, flushUi } from "../../helpers/svelte.js";
 
@@ -72,6 +73,7 @@ function setupNativeInput() {
 
 describe("AttachMenu integration", () => {
   beforeEach(() => {
+    remoteConfig.resetToBuiltin();
     resetAppState({
       ui: { showToast: vi.fn() },
     });
@@ -94,6 +96,12 @@ describe("AttachMenu integration", () => {
     bridgeMocks.pushConfigToPage.mockReset();
     document.body.innerHTML = '<textarea id="chat-input"></textarea><button title="Send message"></button>';
   });
+
+  async function flushModelWatcher() {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await flushUi();
+  }
 
   it("opens the dropdown and triggers native file upload", async () => {
     const nativeInput = setupNativeInput();
@@ -120,6 +128,25 @@ describe("AttachMenu integration", () => {
 
     expect(nativeInput.click).toHaveBeenCalledOnce();
     expect(nativeInput.multiple).toBe(true);
+    cleanup();
+  });
+
+  it("keeps safe Expert mode controls visible while hiding upload menu actions", async () => {
+    document.body.insertAdjacentHTML("beforeend", `
+      <div role="radiogroup">
+        <div role="radio" data-model-type="instant" aria-checked="false">Instant</div>
+        <div role="radio" data-model-type="expert" aria-checked="true">Expert</div>
+      </div>
+    `);
+    const nativeInput = setupNativeInput();
+    const { target, cleanup } = renderSvelte(AttachMenu, { nativeInput });
+
+    await flushModelWatcher();
+
+    expect(target.querySelector(".bds-attach-wrapper")).toBeTruthy();
+    expect(target.querySelector(".bds-project-btn")).toBeTruthy();
+    expect(target.querySelector(".bds-mic-btn")).toBeTruthy();
+    expect(target.querySelector(".bds-plus-btn")).toBeNull();
     cleanup();
   });
 

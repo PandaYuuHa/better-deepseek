@@ -31,7 +31,8 @@ describe("RemoteConfigManager", () => {
       const am = remoteConfig.raw.features.attachMenu;
       expect(am.enabled).toBe(true);
       expect(am.instantMode.show).toBe(true);
-      expect(am.expertMode.show).toBe(false);
+      expect(am.expertMode.show).toBe(true);
+      expect(am.expertMode.showUploadFile).toBe(false);
       expect(am.deepthinkMode.show).toBe(true);
     });
 
@@ -51,7 +52,7 @@ describe("RemoteConfigManager", () => {
     });
 
     it("returns false for disabled flags", () => {
-      expect(getFlag("features.attachMenu.expertMode.show")).toBe(false);
+      expect(getFlag("features.attachMenu.expertMode.showUploadFile")).toBe(false);
     });
 
     it("returns true for enabled flags", () => {
@@ -78,12 +79,12 @@ describe("RemoteConfigManager", () => {
     it("returns an object for nested paths", () => {
       const mode = getConfig("features.attachMenu.expertMode");
       expect(mode).toEqual({
-        show: false,
-        showPlus: true,
+        show: true,
+        showPlus: false,
         showUploadFile: false,
         showUploadFolder: false,
-        showGithub: true,
-        showWeb: true,
+        showGithub: false,
+        showWeb: false,
         showProject: true,
         showVoice: true,
       });
@@ -145,7 +146,7 @@ describe("RemoteConfigManager", () => {
         features: { attachMenu: { instantMode: { show: false } } },
       });
       expect(getFlag("features.attachMenu.instantMode.show")).toBe(false);
-      expect(getFlag("features.attachMenu.expertMode.show")).toBe(false);
+      expect(getFlag("features.attachMenu.expertMode.show")).toBe(true);
     });
 
     it("preserves existing remote keys not in the partial", () => {
@@ -427,12 +428,14 @@ describe("AttachMenu config integration (DOM model switching)", () => {
     expect(show).toBe(true);
   });
 
-  it("expert mode hides attach menu with default config", () => {
+  it("expert mode shows attach menu but hides upload-specific actions by default", () => {
     expertRadio.setAttribute("aria-checked", "true");
     const model = detectModelType();
     const modelKey = getModelKey(model);
-    const show = getFlag(`features.attachMenu.${modelKey}.show`);
-    expect(show).toBe(false);
+    expect(getFlag(`features.attachMenu.${modelKey}.show`)).toBe(true);
+    expect(getFlag(`features.attachMenu.${modelKey}.showPlus`)).toBe(false);
+    expect(getFlag(`features.attachMenu.${modelKey}.showUploadFile`)).toBe(false);
+    expect(getFlag(`features.attachMenu.${modelKey}.showProject`)).toBe(true);
   });
 
   it("switching model changes visibility flags", () => {
@@ -445,7 +448,8 @@ describe("AttachMenu config integration (DOM model switching)", () => {
     defaultRadio.setAttribute("aria-checked", "false");
     model = detectModelType();
     modelKey = getModelKey(model);
-    expect(getFlag(`features.attachMenu.${modelKey}.show`)).toBe(false);
+    expect(getFlag(`features.attachMenu.${modelKey}.show`)).toBe(true);
+    expect(getFlag(`features.attachMenu.${modelKey}.showUploadFile`)).toBe(false);
   });
 
   it("remote config override takes effect for expert mode", () => {
@@ -465,9 +469,9 @@ describe("AttachMenu config integration (DOM model switching)", () => {
     });
     const model = detectModelType();
     const modelKey = getModelKey(model);
-    expect(getFlag(`features.attachMenu.${modelKey}.show`)).toBe(false);
+    expect(getFlag(`features.attachMenu.${modelKey}.show`)).toBe(true);
     expect(getFlag(`features.attachMenu.${modelKey}.showGithub`)).toBe(false);
-    expect(getFlag(`features.attachMenu.${modelKey}.showWeb`)).toBe(true);
+    expect(getFlag(`features.attachMenu.${modelKey}.showWeb`)).toBe(false);
   });
 
   it("no radio group falls back to instant mode", () => {

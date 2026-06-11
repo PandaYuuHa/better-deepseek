@@ -9,9 +9,11 @@ import { mount } from "svelte";
 import AttachMenu from "./ui/AttachMenu.svelte";
 import ExpandToggle from "./ui/ExpandToggle.svelte";
 import RagPreview from "./ui/RagPreview.svelte";
+import DeepResearchToggle from "./ui/DeepResearchToggle.svelte";
 import { injectSearchInput } from "./ui/SidebarSearch.js";
 import { checkPendingExport } from "./tools/pending-export.js";
 import { hideTagsInSidebar, hideTagsInHeader } from "./tags/tag-hider.js";
+import { setDeepResearchEnabled } from "./deep-research.js";
 
 /**
  * Collect all message nodes from the chat DOM.
@@ -170,46 +172,347 @@ function scanPage() {
 /**
  * Scan for the chat text input area to inject custom attachment menu
  */
-function scanInputArea() {
-  const fileInput = document.querySelector('input[type="file"][multiple]');
-  if (!fileInput) return;
-
-  const wrapper = fileInput.parentElement;
-  if (!wrapper || wrapper.hasAttribute("data-bds-attach-menu-mounted")) {
+export function scanInputArea() {
+  const fileInput = findActiveFileInput();
+  const wrapper = findComposerControlsWrapper(fileInput);
+  const deepResearchWrapper = findDeepResearchControlsWrapper(fileInput, wrapper);
+  if (!deepResearchWrapper) {
     return;
   }
 
-  const prevSibling = fileInput.previousElementSibling;
-  let nativeButton = null;
-  if (prevSibling && prevSibling.getAttribute("role") === "button") {
-    nativeButton = prevSibling;
-  } else {
-    nativeButton = wrapper.querySelector('div[role="button"][tabindex="0"]');
-  }
+  const insertBeforeNode = findDeepResearchInsertAnchor(
+    deepResearchWrapper,
+    fileInput,
+    wrapper,
+  );
+  const nativeButton = fileInput ? findNativeFileInputTrigger(fileInput) : null;
 
   if (nativeButton) {
     nativeButton.style.setProperty("display", "none", "important");
   }
 
-  const mountPoint = document.createElement("div");
-  wrapper.insertBefore(mountPoint, fileInput);
+  const deepResearchMountPoint = ensureComposerMount(
+    deepResearchWrapper,
+    "bds-deep-research-mount",
+    ".bds-deep-research-toggle",
+    insertBeforeNode,
+  );
+  if (!deepResearchMountPoint.dataset.bdsMounted) {
+    mount(DeepResearchToggle, {
+      target: deepResearchMountPoint,
+      props: {
+        enabled: state.deepResearch.enabled,
+        onToggle: (enabled) => setDeepResearchEnabled(enabled),
+      },
+    });
+    deepResearchMountPoint.dataset.bdsMounted = "1";
+  }
 
-  mount(AttachMenu, {
-    target: mountPoint,
-    props: {
-      nativeInput: fileInput
+  if (!fileInput || !wrapper) {
+    markComposerControlsMounted(deepResearchWrapper, wrapper);
+    return;
+  }
+
+  if (wrapper !== deepResearchWrapper) {
+    markComposerControlsMounted(deepResearchWrapper);
+  }
+
+  const mountPoint = ensureComposerMount(
+    wrapper,
+    "bds-attach-menu-mount",
+    ".bds-attach-wrapper",
+    fileInput,
+  );
+  if (!mountPoint.dataset.bdsMounted) {
+    mount(AttachMenu, {
+      target: mountPoint,
+      props: {
+        nativeInput: fileInput
+      }
+    });
+    mountPoint.dataset.bdsMounted = "1";
+  }
+
+  const toggleMountPoint = ensureComposerMount(
+    wrapper,
+    "bds-expand-toggle-mount",
+    ".bds-expand-toggle",
+    fileInput,
+  );
+  if (!toggleMountPoint.dataset.bdsMounted) {
+    mount(ExpandToggle, { target: toggleMountPoint });
+    toggleMountPoint.dataset.bdsMounted = "1";
+  }
+
+  const ragMountPoint = ensureComposerMount(
+    wrapper,
+    "bds-rag-preview-mount",
+    ".bds-rag-preview",
+    fileInput,
+  );
+  if (!ragMountPoint.dataset.bdsMounted) {
+    mount(RagPreview, { target: ragMountPoint });
+    ragMountPoint.dataset.bdsMounted = "1";
+  }
+
+  markComposerControlsMounted(wrapper);
+}
+
+function findActiveFileInput() {
+  const inputs = Array.from(document.querySelectorAll('input[type="file"][multiple]'))
+    .filter((input) => !input.closest("#bds-root"));
+
+  return inputs.find((input) =>
+    isUsableComposerElement(input.parentElement || input)
+  ) || inputs[0] || null;
+}
+
+function isUsableComposerElement(element) {
+  if (!element || element.closest("#bds-root")) {
+    return false;
+  }
+
+  for (let node = element; node && node !== document.body; node = node.parentElement) {
+    const style = window.getComputedStyle?.(node);
+    if (
+      node.hidden ||
+      node.getAttribute("aria-hidden") === "true" ||
+      style?.display === "none" ||
+      style?.visibility === "hidden"
+    ) {
+      return false;
     }
-  });
+  }
 
-  const toggleMountPoint = document.createElement("div");
-  wrapper.insertBefore(toggleMountPoint, fileInput);
-  mount(ExpandToggle, { target: toggleMountPoint });
+  const rect = element.getBoundingClientRect?.();
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  if (
+    rect &&
+    viewportWidth > 0 &&
+    viewportHeight > 0 &&
+    (rect.width > 0 || rect.height > 0)
+  ) {
+    return (
+      rect.right >= 0 &&
+      rect.bottom >= 0 &&
+      rect.left <= viewportWidth &&
+      rect.top <= viewportHeight
+    );
+  }
 
-  const ragMountPoint = document.createElement("div");
-  wrapper.insertBefore(ragMountPoint, fileInput);
-  mount(RagPreview, { target: ragMountPoint });
+  return true;
+}
 
-  wrapper.setAttribute("data-bds-attach-menu-mounted", "true");
+function markComposerControlsMounted(...wrappers) {
+  for (const wrapper of wrappers) {
+    if (wrapper) {
+      wrapper.setAttribute("data-bds-attach-menu-mounted", "true");
+    }
+  }
+}
+
+function findComposerControlsWrapper(fileInput) {
+  if (fileInput?.parentElement) {
+    return fileInput.parentElement;
+  }
+
+  const sendButton = findDeepSeekSendButton();
+  if (sendButton?.parentElement) {
+    return sendButton.parentElement;
+  }
+
+  const editor = document.querySelector("textarea#chat-input, textarea[placeholder], [contenteditable='true']");
+  return editor?.parentElement || null;
+}
+
+function findDeepResearchControlsWrapper(fileInput, fallbackWrapper) {
+  const actionRow = findNativePromptActionRow();
+  if (actionRow) {
+    return actionRow;
+  }
+
+  return fallbackWrapper || findComposerControlsWrapper(fileInput);
+}
+
+function findNativePromptActionRow() {
+  const editor = findComposerEditor();
+  const controls = Array.from(
+    document.querySelectorAll(
+      'button, [role="button"], [tabindex], [aria-label], [title]',
+    ),
+  );
+
+  for (const control of controls) {
+    if (control.closest("#bds-root")) {
+      continue;
+    }
+
+    if (editor && !isAfterNode(editor, control)) {
+      continue;
+    }
+
+    if (!isDeepThinkControl(control)) {
+      continue;
+    }
+
+    const row = findControlsRowFor(control, editor);
+    if (row) {
+      return row;
+    }
+  }
+
+  return null;
+}
+
+function findComposerEditor() {
+  return document.querySelector(
+    "textarea#chat-input, textarea[placeholder], [contenteditable='true']",
+  );
+}
+
+function isAfterNode(reference, candidate) {
+  if (!reference || !candidate || reference === candidate) {
+    return true;
+  }
+
+  const following = globalThis.Node?.DOCUMENT_POSITION_FOLLOWING || 4;
+  return Boolean(reference.compareDocumentPosition(candidate) & following);
+}
+
+function isDeepThinkControl(control) {
+  const text = normalizePromptControlText(control.textContent);
+  const label = normalizePromptControlText(
+    `${control.getAttribute("aria-label") || ""} ${control.getAttribute("title") || ""}`,
+  );
+
+  return (
+    text.includes("deepthink") ||
+    text.includes("deep think") ||
+    label.includes("deepthink") ||
+    label.includes("deep think")
+  );
+}
+
+function normalizePromptControlText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function findControlsRowFor(control, editor) {
+  let fallback = null;
+  let node = control.parentElement;
+  let depth = 0;
+
+  while (node && node !== document.body && depth < 6) {
+    if (node.closest("#bds-root")) {
+      return null;
+    }
+
+    if (editor && node.contains(editor)) {
+      return fallback;
+    }
+
+    fallback ||= node;
+
+    if (countPromptControls(node) > 1) {
+      return node;
+    }
+
+    node = node.parentElement;
+    depth += 1;
+  }
+
+  return fallback;
+}
+
+function countPromptControls(container) {
+  return Array.from(
+    container.querySelectorAll('button, [role="button"], [tabindex]'),
+  ).filter((control) => !control.closest("#bds-root")).length;
+}
+
+function findDeepSeekSendButton() {
+  const buttons = Array.from(document.querySelectorAll('div[role="button"], button'));
+  return buttons.find((button) => {
+    if (button.closest("#bds-root")) {
+      return false;
+    }
+    return (
+      button.querySelector?.('svg path[d*="M8.3125"], .ds-icon-send') ||
+      button.querySelector?.('svg path[d*="M13.12 19.98"]') ||
+      button.title === "Send message" ||
+      button.ariaLabel === "Send Message" ||
+      button.getAttribute("aria-label") === "Send Message"
+    );
+  }) || null;
+}
+
+function findDeepResearchInsertAnchor(wrapper, fileInput, fileInputWrapper) {
+  if (fileInput && wrapper === fileInputWrapper) {
+    return fileInput;
+  }
+
+  return findComposerInsertAnchor(wrapper);
+}
+
+function findComposerInsertAnchor(wrapper) {
+  return Array.from(wrapper.children).find((child) =>
+    !child.classList?.contains("bds-deep-research-mount") &&
+    !child.closest?.("#bds-root")
+  ) || null;
+}
+
+function findNativeFileInputTrigger(fileInput) {
+  const candidate = fileInput.previousElementSibling;
+  if (!candidate || candidate.closest("#bds-root")) {
+    return null;
+  }
+
+  if (
+    candidate.classList?.contains("bds-deep-research-mount") ||
+    candidate.classList?.contains("bds-attach-menu-mount") ||
+    candidate.classList?.contains("bds-expand-toggle-mount") ||
+    candidate.classList?.contains("bds-rag-preview-mount")
+  ) {
+    return null;
+  }
+
+  const tag = String(candidate.tagName || "").toLowerCase();
+  const isButtonLike =
+    tag === "button" ||
+    tag === "label" ||
+    candidate.getAttribute("role") === "button";
+
+  return isButtonLike ? candidate : null;
+}
+
+function ensureComposerMount(wrapper, className, descendantSelector, beforeNode) {
+  let mountPoint = Array.from(wrapper.children).find((child) =>
+    child.classList && child.classList.contains(className)
+  );
+
+  if (!mountPoint && className === "bds-deep-research-mount") {
+    mountPoint = document.querySelector(`.${className}`);
+  }
+
+  if (!mountPoint) {
+    mountPoint = Array.from(wrapper.children).find((child) =>
+      child.querySelector && child.querySelector(descendantSelector)
+    );
+  }
+
+  if (!mountPoint) {
+    mountPoint = document.createElement("div");
+  }
+
+  mountPoint.classList.add(className);
+  if (mountPoint.querySelector && mountPoint.querySelector(descendantSelector)) {
+    mountPoint.dataset.bdsMounted = "1";
+  }
+  if (mountPoint.parentElement !== wrapper || mountPoint.nextSibling !== beforeNode) {
+    wrapper.insertBefore(mountPoint, beforeNode);
+  }
+  return mountPoint;
 }
 
 /**
