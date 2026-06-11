@@ -37,6 +37,24 @@ describe("hideGetAppButton", () => {
     expect(container.style.display).toBe("none");
   });
 
+  it("hides DeepSeek's div-based ds-button markup", () => {
+    const headerActions = document.createElement("div");
+    headerActions.className = "_9579690";
+    const button = document.createElement("div");
+    button.className = "ds-button ds-button--outlinedNeutral ds-button--outlined ds-button--capsule ds-button--m ds-button--icon-relative-m ds-button--min-width ad8d4bfc";
+    const label = document.createElement("span");
+    label.className = "ds-button__content";
+    label.textContent = "Get App";
+    button.appendChild(label);
+    headerActions.appendChild(button);
+    document.body.appendChild(headerActions);
+
+    hideGetAppButton();
+
+    expect(button.style.display).toBe("none");
+    expect(headerActions.style.display).not.toBe("none");
+  });
+
   it("sets __bdsGetAppObserver on window", () => {
     makeGetAppButton();
     hideGetAppButton();

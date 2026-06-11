@@ -2,23 +2,27 @@
  * Hides the "Get App" promotional button injected by chat.deepseek.com on mobile viewports.
  * Called by MainActivity.injectBdsScripts() on every page finish.
  *
- * Detection is text-based ("Get App" span) so it survives DeepSeek's dynamic class renames.
+ * Detection is text-based ("Get App" span) and only requires a button-like ancestor
+ * so it survives DeepSeek's dynamic tag/class churn.
  * The MutationObserver stays alive for the lifetime of the page so SPA navigations that
  * re-insert the button are caught automatically.
  */
 export function hideGetAppButton() {
   if (window.__bdsGetAppObserver) return;
 
+  function getHideTarget(label) {
+    const control = label.closest?.("button, .ds-button, [role='button']");
+    if (!control) return null;
+    return control.matches?.(".ds-button") ? control : (control.parentElement || control);
+  }
+
   function hideButton() {
     const spans = document.querySelectorAll("span");
     for (const span of spans) {
       if (span.textContent.trim() !== "Get App") continue;
-      let el = span.parentElement;
-      while (el && el.tagName !== "BUTTON") {
-        el = el.parentElement;
-      }
-      if (el && el.parentElement) {
-        el.parentElement.style.display = "none";
+      const target = getHideTarget(span);
+      if (target) {
+        target.style.display = "none";
         console.log("[BDS] Hidden Get App container");
       }
     }

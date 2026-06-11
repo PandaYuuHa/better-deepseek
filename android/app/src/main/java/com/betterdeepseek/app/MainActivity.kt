@@ -479,22 +479,27 @@ class MainActivity : ComponentActivity() {
         """.trimIndent()
 
         // Hides the "Get App" promotional button shown on mobile viewports.
-        // Detection is text-based so it survives DeepSeek's dynamic class renames.
+        // Detection is text-based and only requires a button-like ancestor so it survives
+        // DeepSeek's dynamic tag/class churn.
         // The observer stays alive for the lifetime of the page so SPA navigations that
         // re-insert the button are caught automatically.
         val hideGetApp =
                 """
             (function () {
                 if (window.__bdsGetAppObserver) return;
+                function getHideTarget(label) {
+                    var control = label.closest && label.closest("button, .ds-button, [role='button']");
+                    if (!control) return null;
+                    return control.matches && control.matches('.ds-button') ? control : (control.parentElement || control);
+                }
                 function hideButton() {
                     var spans = document.querySelectorAll('span');
                     for (var i = 0; i < spans.length; i++) {
                         var span = spans[i];
                         if (span.textContent.trim() !== 'Get App') continue;
-                        var el = span.parentElement;
-                        while (el && el.tagName !== 'BUTTON') { el = el.parentElement; }
-                        if (el && el.parentElement) {
-                            el.parentElement.style.display = 'none';
+                        var target = getHideTarget(span);
+                        if (target) {
+                            target.style.display = 'none';
                             console.log('[BDS] Hidden Get App container');
                         }
                     }
