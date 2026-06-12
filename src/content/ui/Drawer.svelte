@@ -44,6 +44,9 @@
   export function refreshSavedItems() {
     if (savedItemsRef) savedItemsRef.refresh();
   }
+  export function refreshCssSnippets() {
+    if (settingsRef) settingsRef.refreshCssSnippets();
+  }
 
   function openProjectsManager() {
     showProjectsManager = true;

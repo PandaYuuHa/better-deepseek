@@ -49,6 +49,7 @@ export function mountUi() {
     refreshProjects: () => app.refreshProjects(),
     refreshWhatsNew: () => app.refreshWhatsNew(),
     refreshSavedItems: () => app.refreshSavedItems(),
+    refreshCssSnippets: () => app.refreshCssSnippets(),
     showPreviewPanel: (title, content) => app.showPreviewPanel(title, content),
     hidePreviewPanel: () => app.hidePreviewPanel(),
   };

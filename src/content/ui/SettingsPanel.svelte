@@ -13,6 +13,8 @@
   import { CSS_PRESETS } from "../../lib/constants.js";
   import { openNativeFilePicker } from "../files/native-file-input.js";
   import { encryptData, decryptData } from "../../lib/utils/crypto.js";
+  import { makeId } from "../../lib/utils/helpers.js";
+  import SnippetList from "./SnippetList.svelte";
 
   let { onapiplayground, onimportdata } = $props();
 
@@ -67,6 +69,14 @@
   let locale = $state(appState.settings.locale || availableLocaleCodes[0] || "en");
   let syncLocale = $state(Boolean(appState.settings.syncLocale));
   let customCSS = $state(appState.settings.customCSS || "");
+  let editingSnippetId = $state(null);
+  let snippetListRef = $state(null);
+  let isSnippetsOpen = $state(false);
+  let cssSnippets = $state([...appState.cssSnippets]);
+  let activeSnippetsCount = $derived(cssSnippets.filter(s => s.active).length);
+  let showSaveSnippetModal = $state(false);
+  let newSnippetName = $state("");
+  let saveSnippetError = $state("");
   let advancedOpen = $state(false);
   let lastCheckedDate = $state("");
   let updatingLanguages = $state(false);
@@ -157,6 +167,7 @@
         version: 1,
         exportedAt: new Date().toISOString(),
         settings: { ...appState.settings, githubToken: "" },
+        cssSnippets: appState.cssSnippets,
         customSystemPrompts: appState.settings.customSystemPrompts || [],
         skills: appState.skills,
         characters: appState.characters,
@@ -268,6 +279,10 @@
         Object.assign(appState.settings, d.settings);
         appState.settings.githubToken = oldToken;
         await chrome.storage.local.set({ [STORAGE_KEYS.settings]: appState.settings });
+        if (d.cssSnippets) {
+          appState.cssSnippets = d.cssSnippets;
+          await chrome.storage.local.set({ [STORAGE_KEYS.cssSnippets]: appState.cssSnippets });
+        }
       }
       if (selectedSections.has("customSystemPrompts") && d.customSystemPrompts) {
         appState.settings.customSystemPrompts = d.customSystemPrompts;
@@ -396,10 +411,106 @@
     locale = appState.settings.locale || availableLocaleCodes[0] || "en";
     syncLocale = Boolean(appState.settings.syncLocale);
     customCSS = appState.settings.customCSS || "";
+    cssSnippets = [...appState.cssSnippets];
+    if (snippetListRef) snippetListRef.refresh();
     chrome.storage.local.get("bds_locale_update_last_checked", (data) => {
       lastCheckedDate = data.bds_locale_update_last_checked || "";
     });
     formSnapshot = captureFormSnapshot();
+  }
+
+  export function refreshCssSnippets() {
+    cssSnippets = [...appState.cssSnippets];
+    if (snippetListRef) snippetListRef.refresh();
+  }
+
+  function editSnippet(snippetId) {
+    const snippet = appState.cssSnippets.find((s) => s.id === snippetId);
+    if (!snippet) return;
+    editingSnippetId = snippet.id;
+    customCSS = snippet.css;
+    const textarea = document.querySelector(".bds-css-editor");
+    if (textarea) {
+      textarea.focus();
+      textarea.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
+  function cancelEditSnippet() {
+    editingSnippetId = null;
+    customCSS = appState.settings.customCSS || "";
+  }
+
+  async function updateSnippet() {
+    if (!editingSnippetId) return;
+    const snippet = appState.cssSnippets.find((s) => s.id === editingSnippetId);
+    if (!snippet) return;
+
+    snippet.css = customCSS;
+    await chrome.storage.local.set({
+      [STORAGE_KEYS.cssSnippets]: appState.cssSnippets,
+    });
+
+    editingSnippetId = null;
+    customCSS = appState.settings.customCSS || "";
+
+    cssSnippets = [...appState.cssSnippets];
+    if (snippetListRef) snippetListRef.refresh();
+    window.dispatchEvent(new CustomEvent("bds:cssSnippetsChanged"));
+    pushConfigToPage();
+
+    if (appState.ui) {
+      appState.ui.showToast(t("settings.snippetUpdated"));
+    }
+  }
+
+  function saveAsSnippet() {
+    if (!customCSS || !customCSS.trim()) return;
+    newSnippetName = "";
+    saveSnippetError = "";
+    showSaveSnippetModal = true;
+  }
+
+  async function submitSaveSnippet() {
+    const trimmedName = newSnippetName.trim();
+    if (!trimmedName) {
+      saveSnippetError = t("settings.nameRequired");
+      return;
+    }
+
+    const exists = appState.cssSnippets.some(
+      (s) => s.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+    if (exists) {
+      saveSnippetError = t("settings.duplicateNameError");
+      return;
+    }
+
+    const newSnippet = {
+      id: makeId(),
+      name: trimmedName,
+      css: customCSS,
+      active: true,
+      isPreset: false
+    };
+
+    appState.cssSnippets.push(newSnippet);
+    await chrome.storage.local.set({
+      [STORAGE_KEYS.cssSnippets]: appState.cssSnippets
+    });
+
+    customCSS = "";
+
+    cssSnippets = [...appState.cssSnippets];
+    if (snippetListRef) snippetListRef.refresh();
+    window.dispatchEvent(new CustomEvent("bds:cssSnippetsChanged"));
+    pushConfigToPage();
+
+    showSaveSnippetModal = false;
+
+    if (appState.ui) {
+      appState.ui.showToast(t("settings.snippetSaved"));
+    }
   }
 
   onMount(() => {
@@ -1306,21 +1417,21 @@
       {t('settings.tokenPriceHint')}
     </p>
 
-    <div class="bds-toggle-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+    <div class="bds-toggle-row" style="flex-direction: column; align-items: stretch; gap: 0;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;">
         <span class="bds-toggle-label">{t('settings.customCSS')}</span>
-        <select class="bds-select" style="width: auto; font-size: 11px;" onchange={(e) => {
-          const key = e.currentTarget.value;
-          if (key && CSS_PRESETS[key]) {
-            customCSS = CSS_PRESETS[key].css;
-          }
-          e.currentTarget.value = "";
-        }}>
-          <option value="">{t('settings.cssPresets')}...</option>
-          {#each Object.entries(CSS_PRESETS) as [key, preset]}
-            <option value={key}>{t('settings.' + preset.name)}</option>
-          {/each}
-        </select>
+        {#if editingSnippetId}
+          {@const activeSnippet = appState.cssSnippets.find(s => s.id === editingSnippetId)}
+          {#if activeSnippet}
+            {@const displayName = activeSnippet.name.startsWith('preset') ? t('settings.' + activeSnippet.name) : activeSnippet.name}
+            <div class="bds-editing-badge">
+              <span>{t('settings.editingSnippet', { name: displayName })}</span>
+              <button type="button" class="bds-exit-edit-btn" onclick={cancelEditSnippet}>
+                {t('settings.exitEditMode')} ×
+              </button>
+            </div>
+          {/if}
+        {/if}
       </div>
       <textarea
         class="bds-input bds-css-editor"
@@ -1328,6 +1439,48 @@
         bind:value={customCSS}
         placeholder={t('settings.customCSSPlaceholder')}
       ></textarea>
+      <div class="bds-css-toolbar" class:open={isSnippetsOpen}>
+        <button
+          type="button"
+          class="bds-css-toggle-btn"
+          class:active={isSnippetsOpen}
+          onclick={() => isSnippetsOpen = !isSnippetsOpen}
+        >
+          <svg class="bds-snippets-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          <span>{t('settings.manageSnippets')}</span>
+          {#if activeSnippetsCount > 0}
+            <span class="bds-snippets-badge">{activeSnippetsCount}</span>
+          {/if}
+          <svg
+            class="bds-chevron {isSnippetsOpen ? 'bds-chevron-rotated' : ''}"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          class="bds-btn-outlined bds-save-snippet-btn"
+          disabled={!customCSS || !customCSS.trim()}
+          onclick={editingSnippetId ? updateSnippet : saveAsSnippet}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          {editingSnippetId ? t('settings.updateSnippet') : t('settings.saveAsSnippet')}
+        </button>
+      </div>
+      <SnippetList bind:this={snippetListRef} bind:isOpen={isSnippetsOpen} onedit={editSnippet} />
     </div>
 
     <div
@@ -1407,6 +1560,40 @@
   </div>
 {/if}
 
+{#if showSaveSnippetModal}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <div class="bds-modal-overlay" role="dialog" onclick={() => showSaveSnippetModal = false} style="z-index: 10002;">
+    <div class="bds-modal" role="document" onclick={(e) => e.stopPropagation()} style="max-width: 320px;">
+      <div class="bds-modal-header">
+        <span>{t('settings.saveAsSnippet')}</span>
+        <button class="bds-modal-close" onclick={() => showSaveSnippetModal = false}>×</button>
+      </div>
+      <div class="bds-modal-body" style="padding-top: 12px; padding-bottom: 12px;">
+        <div class="bds-field">
+          <label class="bds-label" for="bds-snippet-name-input" style="margin-bottom: 4px;">{t('settings.nameLabel')}</label>
+          <input
+            id="bds-snippet-name-input"
+            type="text"
+            class="bds-input"
+            bind:value={newSnippetName}
+            placeholder={t('settings.namePlaceholder')}
+            autofocus
+            onkeydown={(e) => e.key === 'Enter' && submitSaveSnippet()}
+          />
+          {#if saveSnippetError}
+            <span class="bds-modal-error" style="margin-top: 4px;">{saveSnippetError}</span>
+          {/if}
+        </div>
+      </div>
+      <div class="bds-modal-footer">
+        <button type="button" class="bds-btn-outlined" onclick={() => showSaveSnippetModal = false}>{t('cancel')}</button>
+        <button type="button" class="bds-btn" onclick={submitSaveSnippet}>{t('settings.savePrompt')}</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 {#if showImportPasswordModal}
   <div class="bds-modal-overlay" role="dialog" onclick={closeImportPasswordModal}>
     <div class="bds-modal" role="document" onclick={(e) => e.stopPropagation()}>
@@ -1456,6 +1643,85 @@
 {/if}
 
 <style>
+  .bds-css-editor {
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    margin-bottom: 0 !important;
+    border-bottom: none !important;
+  }
+
+  .bds-css-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--bds-bg-elevated);
+    border: 1px solid var(--bds-border);
+    border-top: none;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    transition: border-radius var(--bds-transition);
+  }
+
+  .bds-css-toolbar.open {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .bds-css-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 1px solid var(--bds-border);
+    border-radius: 6px;
+    color: var(--bds-text-secondary);
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--bds-transition);
+  }
+
+  .bds-css-toggle-btn:hover, .bds-css-toggle-btn.active {
+    background: var(--bds-bg-hover);
+    border-color: var(--bds-accent);
+    color: var(--bds-text-primary);
+  }
+
+  .bds-snippets-icon {
+    color: var(--bds-accent);
+  }
+
+  .bds-snippets-badge {
+    background: var(--bds-accent);
+    color: #ffffff;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-weight: bold;
+    line-height: 1.2;
+  }
+
+  .bds-chevron {
+    transition: transform var(--bds-transition);
+    opacity: 0.6;
+  }
+
+  .bds-chevron-rotated {
+    transform: rotate(180deg);
+  }
+
+  .bds-save-snippet-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+    cursor: pointer;
+  }
+
   .bds-token-field {
     width: 100%;
     display: flex;
@@ -1619,9 +1885,9 @@
     min-height: 200px !important;
     tab-size: 2 !important;
     resize: vertical !important;
-    background: var(--bds-bg-card, #1a1a2e) !important;
-    color: var(--bds-text-primary, #e0e0e0) !important;
-    border: 1px solid var(--bds-border, #2a2a3e) !important;
+    background: var(--bds-bg-input) !important;
+    color: var(--bds-text-primary) !important;
+    border: 1px solid var(--bds-border) !important;
     border-radius: 8px !important;
     padding: 12px !important;
     white-space: pre !important;
@@ -1679,5 +1945,35 @@
   .bds-modal-error {
     color: #e74c3c;
     font-size: 11px;
+  }
+
+  .bds-editing-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bds-accent-glow);
+    border: 1px solid var(--bds-accent);
+    color: var(--bds-text-primary);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .bds-exit-edit-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--bds-accent);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    transition: opacity var(--bds-transition);
+  }
+
+  .bds-exit-edit-btn:hover {
+    opacity: 0.8;
   }
 </style>

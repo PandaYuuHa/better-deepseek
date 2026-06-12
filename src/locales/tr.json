@@ -143,7 +143,21 @@
       "presetReducePadding": "Daraltılmış Boşluk",
       "presetWiderMessages": "Geniş Mesajlar",
       "presetCompact": "Kompakt Arayüz",
-      "presetBetterCodeFont": "Daha İyi Kod Yazı Tipi"
+      "presetBetterCodeFont": "Daha İyi Kod Yazı Tipi",
+      "saveAsSnippet": "Snippet Olarak Kaydet",
+      "manageSnippets": "CSS Snippet'lerini Yönet",
+      "restore": "Geri Yükle",
+      "delete": "Sil",
+      "enterSnippetName": "Snippet ismini girin:",
+      "snippetSaved": "Snippet kaydedildi!",
+      "snippetDeleted": "Snippet silindi",
+      "presetRestored": "Hazır şablon sıfırlandı",
+      "duplicateNameError": "Bu isimde bir snippet zaten var.",
+      "updateSnippet": "Snippet'ı Güncelle",
+      "snippetUpdated": "Snippet güncellendi!",
+      "editingSnippet": "Düzenlenen snippet: {{name}}",
+      "exitEditMode": "Düzenlemeden Çık",
+      "noSnippets": "Henüz CSS snippet'ı yok."
     },
     "skillList": {
       "title": "Yetenek Seti",

@@ -46,7 +46,7 @@ async function init() {
   await waitForBody();
   await loadStateFromStorage();
 
-  applyCustomCSS(state.settings.customCSS);
+  applyCustomCSS(state.settings.customCSS, state.cssSnippets);
 
   // Initialize localization locale
   i18n.init(state.settings.syncLocale ? null : state.settings.locale);
@@ -79,7 +79,12 @@ async function init() {
 
   // Live-update custom CSS when settings change
   window.addEventListener("bds:settingsChanged", () => {
-    applyCustomCSS(state.settings.customCSS);
+    applyCustomCSS(state.settings.customCSS, state.cssSnippets);
+  });
+
+  // Live-update custom CSS when snippets change
+  window.addEventListener("bds:cssSnippetsChanged", () => {
+    applyCustomCSS(state.settings.customCSS, state.cssSnippets);
   });
 
   window.addEventListener("bds:deep-research-config-changed", () => {
@@ -248,7 +253,7 @@ async function waitForBody() {
   });
 }
 
-function applyCustomCSS(css) {
+function applyCustomCSS(customCSS, snippets) {
   const id = "bds-custom-css";
   let style = document.getElementById(id);
   if (!style) {
@@ -256,5 +261,17 @@ function applyCustomCSS(css) {
     style.id = id;
     document.head.appendChild(style);
   }
-  style.textContent = css || "";
+  
+  let compiled = customCSS || "";
+  if (Array.isArray(snippets)) {
+    const activeSnippetsCss = snippets
+      .filter((s) => s.active)
+      .map((s) => `/* Snippet: ${s.name} */\n${s.css}`)
+      .join("\n\n");
+    if (activeSnippetsCss) {
+      compiled = `${activeSnippetsCss}\n\n/* Raw Custom CSS */\n${compiled}`;
+    }
+  }
+  
+  style.textContent = compiled;
 }

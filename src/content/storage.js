@@ -11,6 +11,7 @@ import {
   SYSTEM_PROMPT_TEMPLATE_VERSION,
   DOWNLOAD_BEHAVIOR_VERSION,
   DEFAULT_REMOTE_CONFIG,
+  CSS_PRESETS,
 } from "../lib/constants.js";
 import { makeId } from "../lib/utils/helpers.js";
 import { setHtmlToMarkdownMaxDepth } from "./dom/message-text.js";
@@ -32,6 +33,7 @@ export async function loadStateFromStorage() {
     STORAGE_KEYS.savedItems,
     STORAGE_KEYS.remoteAnnouncement,
     STORAGE_KEYS.dismissedAnnouncements,
+    STORAGE_KEYS.cssSnippets,
     "bds_locale_updates",
   ]);
 
@@ -107,6 +109,7 @@ export async function loadStateFromStorage() {
   }
 
   state.skills = normalizeSkills(values[STORAGE_KEYS.skills]);
+  state.cssSnippets = normalizeCssSnippets(values[STORAGE_KEYS.cssSnippets]);
   state.memories = normalizeMemories(values[STORAGE_KEYS.memories]);
   state.characters = normalizeCharacters(values[STORAGE_KEYS.characters]);
   state.projects = normalizeProjects(values[STORAGE_KEYS.projects]);
@@ -337,6 +340,70 @@ export function normalizeSavedItems(raw) {
     }));
 }
 
+export function normalizeCssSnippets(raw) {
+  const defaultPresets = [
+    {
+      id: "preset-reducePadding",
+      name: "presetReducePadding",
+      css: CSS_PRESETS.reducePadding.css,
+      active: false,
+      isPreset: true,
+    },
+    {
+      id: "preset-widerMessages",
+      name: "presetWiderMessages",
+      css: CSS_PRESETS.widerMessages.css,
+      active: false,
+      isPreset: true,
+    },
+    {
+      id: "preset-compact",
+      name: "presetCompact",
+      css: CSS_PRESETS.compact.css,
+      active: false,
+      isPreset: true,
+    },
+    {
+      id: "preset-betterCodeFont",
+      name: "presetBetterCodeFont",
+      css: CSS_PRESETS.betterCodeFont.css,
+      active: false,
+      isPreset: true,
+    },
+  ];
+
+  if (!Array.isArray(raw)) {
+    return defaultPresets;
+  }
+
+  const map = new Map(raw.map((item) => [item.id, item]));
+
+  const finalPresets = defaultPresets.map((preset) => {
+    const existing = map.get(preset.id);
+    if (existing) {
+      map.delete(preset.id);
+      return {
+        ...preset,
+        css: existing.css !== undefined ? existing.css : preset.css,
+        active: !!existing.active,
+      };
+    }
+    return preset;
+  });
+
+  const customSnippets = Array.from(map.values())
+    .map((item) => ({
+      id: String(item.id || makeId()),
+      name: String(item.name || "Snippet"),
+      css: String(item.css || ""),
+      active: !!item.active,
+      isPreset: false,
+    }))
+    .filter((item) => item.css.trim().length > 0);
+
+  return [...finalPresets, ...customSnippets];
+}
+
 // ── Storage change listener ──
 
 export function bindStorageChangeListener() {
@@ -421,6 +488,14 @@ export function bindStorageChangeListener() {
     if (changes[STORAGE_KEYS.savedItems]) {
       state.savedItems = normalizeSavedItems(changes[STORAGE_KEYS.savedItems].newValue);
       if (state.ui) state.ui.refreshSavedItems();
+    }
+
+    if (changes[STORAGE_KEYS.cssSnippets]) {
+      state.cssSnippets = normalizeCssSnippets(changes[STORAGE_KEYS.cssSnippets].newValue);
+      if (state.ui && typeof state.ui.refreshCssSnippets === 'function') {
+        state.ui.refreshCssSnippets();
+      }
+      window.dispatchEvent(new CustomEvent("bds:cssSnippetsChanged"));
     }
 
     if (changes[STORAGE_KEYS.remoteAnnouncement]) {

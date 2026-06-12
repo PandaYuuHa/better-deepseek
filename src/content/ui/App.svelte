@@ -58,6 +58,9 @@
   export function refreshSavedItems() {
     if (drawerRef) drawerRef.refreshSavedItems();
   }
+  export function refreshCssSnippets() {
+    if (drawerRef) drawerRef.refreshCssSnippets();
+  }
 
   export function refreshWhatsNew() {
     whatsNewPending = appState.whatsNewPending;

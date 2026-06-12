@@ -13,6 +13,7 @@ export const STORAGE_KEYS = {
   savedItems: "bds_saved_items",
   remoteConfig: "bds_remote_config",
   remoteConfigMeta: "bds_remote_config_meta",
+  cssSnippets: "bds_css_snippets",
   // Last observed DeepSeek page theme. Written on all platforms so desktop modals and Android
   // native bars can both read it without relying on OS-level dark-mode assumptions.
   pageIsDark: "bds_page_is_dark",

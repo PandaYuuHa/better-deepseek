@@ -143,7 +143,21 @@
       "presetReducePadding": "减少聊天内边距",
       "presetWiderMessages": "更宽的消息",
       "presetCompact": "紧凑界面",
-      "presetBetterCodeFont": "更好的代码字体"
+      "presetBetterCodeFont": "更好的代码字体",
+      "saveAsSnippet": "保存为 CSS 片段",
+      "manageSnippets": "管理 CSS 片段",
+      "restore": "重置",
+      "delete": "删除",
+      "enterSnippetName": "输入片段名称：",
+      "snippetSaved": "片段已保存！",
+      "snippetDeleted": "片段已删除",
+      "presetRestored": "预设已重置为默认",
+      "duplicateNameError": "已存在同名的 CSS 片段。",
+      "updateSnippet": "更新片段",
+      "snippetUpdated": "片段已更新！",
+      "editingSnippet": "正在编辑片段: {{name}}",
+      "exitEditMode": "退出编辑模式",
+      "noSnippets": "暂无 CSS 片段。"
     },
     "skillList": {
       "title": "技能管理",

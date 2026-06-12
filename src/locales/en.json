@@ -144,7 +144,21 @@
       "presetReducePadding": "Reduce Chat Padding",
       "presetWiderMessages": "Wider Messages",
       "presetCompact": "Compact UI",
-      "presetBetterCodeFont": "Better Code Font"
+      "presetBetterCodeFont": "Better Code Font",
+      "saveAsSnippet": "Save as Snippet",
+      "manageSnippets": "Manage CSS Snippets",
+      "restore": "Restore",
+      "delete": "Delete",
+      "enterSnippetName": "Enter snippet name:",
+      "snippetSaved": "Snippet saved!",
+      "snippetDeleted": "Snippet deleted",
+      "presetRestored": "Preset restored to default",
+      "duplicateNameError": "A snippet with this name already exists.",
+      "updateSnippet": "Update Snippet",
+      "snippetUpdated": "Snippet updated!",
+      "editingSnippet": "Editing snippet: {{name}}",
+      "exitEditMode": "Exit Edit Mode",
+      "noSnippets": "No CSS snippets yet."
     },
     "skillList": {
       "title": "Skill Set",

@@ -143,7 +143,21 @@
       "presetReducePadding": "Уменьшить отступы",
       "presetWiderMessages": "Широкие сообщения",
       "presetCompact": "Компактный интерфейс",
-      "presetBetterCodeFont": "Лучший шрифт для кода"
+      "presetBetterCodeFont": "Лучший шрифт для кода",
+      "saveAsSnippet": "Сохранить как сниппет",
+      "manageSnippets": "Управление CSS-сниппетами",
+      "restore": "Сбросить",
+      "delete": "Удалить",
+      "enterSnippetName": "Введите название сниппета:",
+      "snippetSaved": "Сниппет сохранён!",
+      "snippetDeleted": "Сниппет удалён",
+      "presetRestored": "Пресет сброшен по умолчанию",
+      "duplicateNameError": "Сниппет с таким именем уже существует.",
+      "updateSnippet": "Обновить сниппет",
+      "snippetUpdated": "Сниппет обновлен!",
+      "editingSnippet": "Редактирование сниппета: {{name}}",
+      "exitEditMode": "Выйти из режима редактирования",
+      "noSnippets": "CSS-сниппетов пока нет."
     },
     "skillList": {
       "title": "Набор навыков",
