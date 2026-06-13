@@ -655,6 +655,27 @@
       "seeAllChanges": "在 GitHub 上查看 v{{version}} 全部变更",
       "seeDetailed": "在 GitHub 上查看详细发布说明",
       "features": {
+        "v0_1_9": {
+          "title": "多系统提示词、可视化工具重做与深度研究",
+          "features": {
+            "feat_0": {
+              "title": "多系统提示词模式与高级调度",
+              "description": "使用多个系统提示词条目，每个条目可单独设置调度选项 - 首条消息、每N轮或始终。"
+            },
+            "feat_1": {
+              "title": "可视化工具重做",
+              "description": "可视化工具现在可以调整大小和下载。整个界面已重新设计，体验更简洁。"
+            },
+            "feat_2": {
+              "title": "深度研究",
+              "description": "告诉 DeepSeek 一个主题，查看生成的研究计划，批准后自动进行多步骤深度研究。"
+            },
+            "feat_3": {
+              "title": "导出/导入改进",
+              "description": "所有扩展数据 - 设置、技能、记忆、角色、项目 - 现在都可以导出和导入，并支持可选加密。"
+            }
+          }
+        },
         "v0_1_8": {
           "title": "内存重做、保存的项目和 API 测试工具",
           "features": {

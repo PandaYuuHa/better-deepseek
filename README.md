@@ -341,6 +341,13 @@ Better DeepSeek does not collect, transmit, or sell any personal data. All setti
 
 ## Changelog
 
+### v0.1.9 (2026-06-13)
+- **New Feature**: Multi-System Prompt Mode & Advanced Scheduling. Use multiple system prompt entries with per-entry scheduling - first message, every N turns, or always.
+- **New Feature**: DeepResearch. Tell DeepSeek a topic, review the generated plan, and upon approval it conducts deep multi-step research automatically. (Thanks to [@WhiteLicorice](https://github.com/WhiteLicorice)).
+- **Visualizer Rework**: Visualizer widgets can now be resized and downloaded. The entire UI has been reworked for a cleaner experience.
+- **Export/Import Overhaul**: All extension data (settings, skills, memories, characters, projects) can now be exported and imported with optional encryption support.
+- **Custom CSS Rework**: The custom CSS system has been updated. You can now save snippets as snippets and activate multiple snippets at the same time.
+
 ### v0.1.8 (2026-06-01)
 - **Memory Rework**: The called memory system has been reworked with a token overlap-based approach for better context matching.
 - **Saved Items (Bookmarks & Snippets)**: Save messages for later access. Create snippets and send them with a single click.

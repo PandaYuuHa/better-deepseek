@@ -655,6 +655,27 @@
       "seeAllChanges": "v{{version}} sürümündeki tüm değişiklikleri GitHub'da gör",
       "seeDetailed": "Detaylı sürüm notlarını GitHub'da gör",
       "features": {
+        "v0_1_9": {
+          "title": "Çoklu Sistem Promptları, Visualizer Yenilemesi ve Derin Araştırma",
+          "features": {
+            "feat_0": {
+              "title": "Çoklu Sistem Prompt Modu ve Gelişmiş Zamanlama",
+              "description": "Her giriş için ayrı zamanlama seçenekleriyle birden fazla sistem promptu kullanın - ilk mesaj, her N turda bir veya her zaman."
+            },
+            "feat_1": {
+              "title": "Visualizer Yenilemesi",
+              "description": "Visualizer araçları artık yeniden boyutlandırılabiliyor ve indirilebiliyor. Tüm arayüz daha temiz bir deneyim için yeniden tasarlandı."
+            },
+            "feat_2": {
+              "title": "Derin Araştırma",
+              "description": "DeepSeek'e bir konu söyleyin, oluşturulan planı inceleyin ve onayladığınızda otomatik olarak çok adımlı derin araştırma yapsın."
+            },
+            "feat_3": {
+              "title": "Dışa/içe Aktarma Geliştirmeleri",
+              "description": "Tüm uzantı verileri (ayarlar, skill'ler, anılar, karakterler, projeler) artık isteğe bağlı şifreleme desteğiyle dışa ve içe aktarılabiliyor."
+            }
+          }
+        },
         "v0_1_8": {
           "title": "Bellek Revizyonu, Kaydedilen Öğeler ve API Playground",
           "features": {

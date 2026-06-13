@@ -1,5 +1,32 @@
 export const VERSION_HISTORY = [
   {
+    version: "0.1.9",
+    date: "2026-06-13",
+    title: "Multi-System Prompts, Visualizer Rework & Deep Research",
+    features: [
+      {
+        type: "feature",
+        title: "Multi-System Prompt Mode & Advanced Scheduling",
+        description: "Use multiple system prompt entries with per-entry scheduling options - first message, every N turns, or always."
+      },
+      {
+        type: "feature",
+        title: "Visualizer Rework",
+        description: "Visualizer widgets can now be resized and downloaded. The entire UI has been reworked for a cleaner experience."
+      },
+      {
+        type: "feature",
+        title: "DeepResearch",
+        description: "Tell DeepSeek a topic, review the generated plan, and upon approval it conducts deep multi-step research automatically."
+      },
+      {
+        type: "export",
+        title: "Export/Import Overhaul",
+        description: "All extension data (settings, skills, memories, characters, projects) can now be exported and imported with optional encryption support."
+      }
+    ]
+  },
+  {
     version: "0.1.8",
     date: "2026-06-01",
     title: "Memory Rework, Saved Items & API Playground",
