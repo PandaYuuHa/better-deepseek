@@ -155,7 +155,7 @@ export async function pushConfigToPage() {
     const detail = {
       systemPrompt: String(activeSystemPrompt),
       systemPromptEntries: state.settings.systemPromptMultiMode
-        ? (state.settings.systemPromptEntries || [])
+        ? (Array.isArray(state.settings.systemPromptEntries) ? state.settings.systemPromptEntries : [])
             .filter(e => e.enabled && e.content && e.content.trim())
             .map(e => ({
               id: e.id,

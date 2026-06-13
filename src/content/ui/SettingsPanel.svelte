@@ -47,7 +47,8 @@
     Boolean(appState.settings.disableSystemPrompt),
   );
   let systemPromptMultiMode = $state(Boolean(appState.settings.systemPromptMultiMode));
-  let systemPromptEntries = $state(appState.settings.systemPromptEntries || []);
+  let systemPromptEntries = $state(Array.isArray(appState.settings.systemPromptEntries) ? appState.settings.systemPromptEntries : []);
+  let safeSystemPromptEntries = $derived(Array.isArray(systemPromptEntries) ? systemPromptEntries : []);
   let systemPromptInjectionFrequency = $state(
     appState.settings.systemPromptInjectionFrequency || "first",
   );
@@ -385,7 +386,7 @@
     customSystemPrompts = appState.settings.customSystemPrompts || [];
     activeSystemPromptId = appState.settings.activeSystemPromptId || "default";
     systemPromptMultiMode = Boolean(appState.settings.systemPromptMultiMode);
-    systemPromptEntries = appState.settings.systemPromptEntries || [];
+    systemPromptEntries = Array.isArray(appState.settings.systemPromptEntries) ? appState.settings.systemPromptEntries : [];
     autoFiles = Boolean(appState.settings.autoDownloadFiles);
     autoZip = Boolean(appState.settings.autoDownloadLongWorkZip);
     voiceMode = Boolean(appState.settings.voiceMode);
@@ -598,6 +599,7 @@
     } catch (e) {
       entriesSnapshot = JSON.parse(JSON.stringify(systemPromptEntries));
     }
+    if (!Array.isArray(entriesSnapshot)) entriesSnapshot = [];
     appState.settings.systemPromptEntries = entriesSnapshot;
 
     // When "default" is active, ensure the stored prompt always reflects the
@@ -767,9 +769,11 @@
           everyNTurns: multiEntryScheduleType === "interval" ? Math.max(1, Math.floor(Number(multiEntryScheduleInterval) || 3)) : 1,
         },
       };
-      systemPromptEntries = [...systemPromptEntries, newEntry];
+      const current = Array.isArray(systemPromptEntries) ? systemPromptEntries : [];
+      systemPromptEntries = [...current, newEntry];
     } else if (editingPrompt) {
-      systemPromptEntries = systemPromptEntries.map(e =>
+      const current = Array.isArray(systemPromptEntries) ? systemPromptEntries : [];
+      systemPromptEntries = current.map(e =>
         e.id === editingPrompt.id
           ? {
               ...e,
@@ -793,18 +797,18 @@
     if (!appState.settings?.skipDeletionConfirmation) {
       if (!(await appState.ui.showConfirm(`Delete system prompt entry?`))) return;
     }
-    systemPromptEntries = systemPromptEntries.filter(e => e.id !== id);
+    const entries = Array.isArray(systemPromptEntries) ? systemPromptEntries : [];
+    systemPromptEntries = entries.filter(e => e.id !== id);
     save();
   }
 
   function toggleMultiMode() {
     systemPromptMultiMode = !systemPromptMultiMode;
     if (systemPromptMultiMode) {
-      // Migrate existing prompts to multi-entry format
-      if (systemPromptEntries.length === 0) {
-        const entries = [];
-        // Add default prompt
-        entries.push({
+      const entries = Array.isArray(systemPromptEntries) ? systemPromptEntries : [];
+      if (entries.length === 0) {
+        const newEntries = [];
+        newEntries.push({
           id: "sp_default",
           name: t('settings.defaultPromptName'),
           content: appState.settings.systemPrompt || DEFAULT_SYSTEM_PROMPT,
@@ -814,9 +818,8 @@
             everyNTurns: Number(systemPromptInjectionInterval) || 3,
           },
         });
-        // Add custom prompts that were active
         for (const cp of (appState.settings.customSystemPrompts || [])) {
-          entries.push({
+          newEntries.push({
             id: cp.id,
             name: cp.name,
             content: cp.content,
@@ -824,11 +827,11 @@
             schedule: { type: "first", everyNTurns: 1 },
           });
         }
-        systemPromptEntries = entries;
+        systemPromptEntries = newEntries;
       }
     } else {
-      // Going back to single mode - keep first enabled entry as active prompt
-      const firstEnabled = systemPromptEntries.find(e => e.enabled);
+      const entries = Array.isArray(systemPromptEntries) ? systemPromptEntries : [];
+      const firstEnabled = entries.find(e => e.enabled);
       if (firstEnabled) {
         customSystemPrompts = customSystemPrompts.filter(p => p.id === firstEnabled.id);
         if (!customSystemPrompts.find(p => p.id === firstEnabled.id)) {
@@ -903,11 +906,11 @@
 
 {#if systemPromptMultiMode}
   <div class="bds-list">
-    {#each systemPromptEntries as entry (entry.id)}
+    {#each safeSystemPromptEntries as entry (entry.id)}
       <div class="bds-skill-item">
         <label class="bds-switch" style="margin-right: 8px; flex: none;">
           <input type="checkbox" checked={entry.enabled} onchange={() => {
-            systemPromptEntries = systemPromptEntries.map(e =>
+            systemPromptEntries = (Array.isArray(systemPromptEntries) ? systemPromptEntries : []).map(e =>
               e.id === entry.id ? { ...e, enabled: !e.enabled } : e
             );
             save();

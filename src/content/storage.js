@@ -48,6 +48,7 @@ export async function loadStateFromStorage() {
     ...storedSettings,
   };
   state.settings.customSystemPrompts = normalizeCustomSystemPrompts(state.settings.customSystemPrompts);
+  state.settings.systemPromptEntries = normalizeSystemPromptEntries(state.settings.systemPromptEntries);
 
   setHtmlToMarkdownMaxDepth(state.settings.htmlToMarkdownMaxDepth);
   setMaxChatSessions(state.settings.maxChatSessions);
@@ -206,6 +207,29 @@ export function normalizeCustomSystemPrompts(raw) {
       content: String(item && item.content ? item.content : ""),
     }))
     .filter((item) => item.content.trim().length > 0);
+}
+
+export function normalizeSystemPromptEntries(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((e) => ({
+      id: String(e && e.id ? e.id : ""),
+      name: String(e && e.name ? e.name : ""),
+      content: String(e && e.content ? e.content : ""),
+      enabled: e && typeof e.enabled === "boolean" ? e.enabled : true,
+      schedule: normalizeSystemPromptSchedule(e && e.schedule),
+    }))
+    .filter((e) => e.id && e.content.trim().length > 0);
+}
+
+function normalizeSystemPromptSchedule(raw) {
+  if (!raw || typeof raw !== "object") return { type: "first", everyNTurns: 1 };
+  const type = String(raw.type || "first");
+  const validTypes = ["first", "always", "interval"];
+  return {
+    type: validTypes.includes(type) ? type : "first",
+    everyNTurns: Math.max(1, Math.floor(Number(raw.everyNTurns) || 1)),
+  };
 }
 
 export function normalizeCharacters(raw) {
@@ -418,6 +442,7 @@ export function bindStorageChangeListener() {
         ...(changes[STORAGE_KEYS.settings].newValue || {}),
       };
       state.settings.customSystemPrompts = normalizeCustomSystemPrompts(state.settings.customSystemPrompts);
+      state.settings.systemPromptEntries = normalizeSystemPromptEntries(state.settings.systemPromptEntries);
       setHtmlToMarkdownMaxDepth(state.settings.htmlToMarkdownMaxDepth);
       setMaxChatSessions(state.settings.maxChatSessions);
 
