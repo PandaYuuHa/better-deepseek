@@ -188,6 +188,8 @@
   }
 
   .bds-runner-icon.python { color: #10b981; }
+  .bds-runner-icon.lua { color: #a855f7; }
+  .bds-runner-icon.ruby { color: #dc2626; }
   .bds-runner-icon.js { color: #f59e0b; }
 
   .bds-title-group {
