@@ -69,13 +69,13 @@ export function normalizeTaggedCodeContent(content, tagName) {
  * "Here is the code: const doc = ..."
  */
 function stripLeadingChatter(content) {
-  let output = String(content || "").trim();
+  let output = String(content || "").replace(/^(?:[\t ]*\r?\n)+/, "").replace(/(?:\r?\n[\t ]*)+$/, "");
 
   // If content is wrapped in a code fence (possibly with leading chatter),
   // unwrap it first so the JS-keyword check can work on the actual code.
   const fenceMatch = output.match(/```(?:[a-zA-Z0-9_+.-]*)\s*\r?\n?([\s\S]*?)```\s*$/);
   if (fenceMatch) {
-    output = fenceMatch[1].trim();
+    output = fenceMatch[1].replace(/^(?:[\t ]*\r?\n)+/, "").replace(/(?:\r?\n[\t ]*)+$/, "");
   }
 
   // If it already looks like it starts with code, leave it
@@ -87,7 +87,7 @@ function stripLeadingChatter(content) {
   const jsStartMatch = output.match(/(?:\r?\n|^)\s*(const|let|var|function|async|import|class|await|document)\s+/);
   if (jsStartMatch && jsStartMatch.index > 0) {
     console.log(`[BDS:Parser] Stripping leading chatter for JS block: "${output.substring(0, 30)}..."`);
-    return output.substring(jsStartMatch.index).trim();
+    return output.substring(jsStartMatch.index).replace(/^(?:[\t ]*\r?\n)+/, "").replace(/(?:\r?\n[\t ]*)+$/, "");
   }
 
   return output;
@@ -103,7 +103,7 @@ export function unwrapMarkdownCodeFence(content) {
   // Only unwrap if the ENTIRE content is wrapped in a single outer code fence.
   // This correctly preserves content with multiple inner code fences
   // (e.g., README files, skill instructions with code examples).
-  const trimmed = text.trim();
+  const trimmed = text.replace(/^(?:[\t ]*\r?\n)+/, "").replace(/(?:\r?\n[\t ]*)+$/, "");
 
   // Match: ```lang\n...\n``` (single outer fence, nothing before/after)
   const singleFenceMatch = trimmed.match(/^```(?:[a-zA-Z0-9_+.-]*)[ \t]*\r?\n?([\s\S]*?)```\s*$/);
@@ -113,7 +113,7 @@ export function unwrapMarkdownCodeFence(content) {
 
   // Handle unclosed fence: ```lang\n...code... (no closing ```)
   // Use only-leading-whitespace stripped text so trailing \n isn't lost
-  const leadTrimmed = text.replace(/^\s+/, '');
+  const leadTrimmed = text.replace(/^(?:[\t ]*\r?\n)+/, "");
   const unclosedMatch = leadTrimmed.match(/^```(?:[a-zA-Z0-9_+.-]*)[ \t]*\r?\n?([\s\S]+)$/);
   if (unclosedMatch) {
     return unclosedMatch[1];

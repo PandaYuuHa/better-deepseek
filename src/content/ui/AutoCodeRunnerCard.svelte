@@ -119,7 +119,7 @@
 
   {#if showCode}
     <div class="bds-auto-runner-source">
-      <pre>{content.trim()}</pre>
+      <pre>{content}</pre>
     </div>
   {/if}
 

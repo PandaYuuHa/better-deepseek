@@ -61,9 +61,9 @@ describe("unwrapMarkdownCodeFence — whitespace preservation", () => {
     );
   });
 
-  it("preserves internal indent in non-fenced content (leading/trailing whitespace is trimmed)", () => {
+  it("preserves all indent in non-fenced content (only empty lines are trimmed)", () => {
     expect(unwrapMarkdownCodeFence("class Foo:\n    pass")).toBe("class Foo:\n    pass");
-    expect(unwrapMarkdownCodeFence("   def foo():\n    pass")).toBe("def foo():\n    pass");
+    expect(unwrapMarkdownCodeFence("   def foo():\n    pass")).toBe("   def foo():\n    pass");
   });
 
   it("does not strip trailing whitespace before closing fence", () => {
@@ -113,9 +113,9 @@ describe("unwrapMarkdownCodeFence — edge cases", () => {
     expect(unwrapMarkdownCodeFence(input)).toBe("x = 1\n");
   });
 
-  it("trims leading and trailing whitespace for non-fenced content", () => {
-    expect(unwrapMarkdownCodeFence("   some text")).toBe("some text");
-    expect(unwrapMarkdownCodeFence("stuff   ")).toBe("stuff");
+  it("preserves leading and trailing whitespace on the same line for non-fenced content", () => {
+    expect(unwrapMarkdownCodeFence("   some text")).toBe("   some text");
+    expect(unwrapMarkdownCodeFence("stuff   ")).toBe("stuff   ");
   });
 
   it("preserves file content that itself contains BDS-like tags", () => {
