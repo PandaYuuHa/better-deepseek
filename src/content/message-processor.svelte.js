@@ -997,7 +997,13 @@ function getMessageTimestamp(node, role, nodeIndex, messages) {
       }
     }
   }
-  return Date.now();
+  // If we have API data but this specific message isn't in it (e.g. a new
+  // message sent after loadAllHistory completed), Date.now() is close enough.
+  if (messages && messages.length > 0) {
+    return Date.now();
+  }
+  // No API data loaded yet — don't show a misleading timestamp; wait for rescan.
+  return 0;
 }
 
 function formatTimestamp(ts) {
@@ -1030,6 +1036,14 @@ function processMessageTimestamp(node, role, nodeIndex, nodes) {
   const sessionId = getCurrentConversationIdInline();
   const messages = state.chatMessagesBySession.get(sessionId) || [];
   const ts = getMessageTimestamp(node, role, nodeIndex, messages);
+  
+  if (ts === 0) {
+    if (existingEl) {
+      existingEl.remove();
+    }
+    return;
+  }
+  
   const formatted = formatTimestamp(ts);
   
   if (existingEl) {

@@ -734,7 +734,7 @@ export const DEFAULT_SETTINGS = {
   disableMemory: false,
   systemPromptInjectionFrequency: "first",
   systemPromptInjectionInterval: 3,
-  htmlToMarkdownMaxDepth: 200,
+  htmlToMarkdownMaxDepth: 400,
   maxChatSessions: 500,
   tokenPriceDisplay: false,
   projectRagEnabled: false,
@@ -754,7 +754,7 @@ export const DEFAULT_SETTINGS = {
   deepResearchContextStopPercent: 70,
   // Load all history — scroll to top on session open to trigger lazy-load
   loadAllHistoryOnSession: false,
-  showTimestamps: true,
+  showTimestamps: false,
 };
 
 // ── Default Remote Config (built-in fallback) ──
