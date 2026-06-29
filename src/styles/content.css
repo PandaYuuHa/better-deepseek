@@ -397,6 +397,7 @@ textarea.bds-input,
 
 .bds-advanced-content {
   display: grid;
+  grid-template-columns: 1fr;
   grid-template-rows: 0fr;
   transition: grid-template-rows var(--bds-transition), padding var(--bds-transition);
   overflow: hidden;
@@ -4550,7 +4551,8 @@ textarea.bds-input,
 
 /* ── Advanced Settings Search ── */
 .bds-advanced-search-wrapper {
-  padding: 8px 12px;
+  padding: 8px;
+  overflow: hidden;
 }
 .bds-advanced-search-input-wrapper {
   display: flex;
@@ -4571,6 +4573,7 @@ textarea.bds-input,
 }
 .bds-advanced-search-input {
   flex: 1;
+  min-width: 0;
   background: transparent;
   border: none;
   outline: none;
@@ -4578,10 +4581,13 @@ textarea.bds-input,
   font-size: 12px;
 }
 .bds-advanced-autocomplete {
+  width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--bds-border);
   border-radius: 8px;
   max-height: 150px;
   overflow-y: auto;
+  overflow-x: hidden;
   margin-top: 4px;
   margin-bottom: 4px;
 }
@@ -4591,6 +4597,7 @@ textarea.bds-input,
   gap: 8px;
   width: 100%;
   padding: 8px 12px;
+  box-sizing: border-box;
   background: transparent;
   border: none;
   color: var(--bds-text-primary);
@@ -4603,6 +4610,8 @@ textarea.bds-input,
   background: var(--bds-bg-hover);
 }
 .bds-advanced-ac-label {
+  flex: 1;
+  min-width: 0;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
