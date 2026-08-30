@@ -1220,7 +1220,8 @@
       "en": "English",
       "tr": "Türkçe",
       "ru": "Русский",
-      "zh-cn": "简体中文"
+      "zh-cn": "简体中文",
+      "fa": "فارسی"
     },
     "apiPlayground": {
       "title": "API 实验场",
